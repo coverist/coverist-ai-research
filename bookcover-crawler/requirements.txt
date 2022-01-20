@@ -1,0 +1,5 @@
+beautifulsoup4
+pandas
+Pillow
+requests
+tqdm
