@@ -17,11 +17,11 @@ $ pip install -r requirements.txt
 ```
 
 ## Getting started
-First of all, you need to choose the range of released dates. The crawler will collect the books which is published in the given range. In this section, we will set the range to `202001 ~ 202012`.
+First of all, you need to choose the range of released dates of the books you want to download. The crawler will collect the books which is published in the given range. In this section, we will set the range to `202001 ~ 202012`.
 ```bash
 $ python src/main.py --start-date=202001 --end-date=202012
 ```
-After running the above example, check if `kyobobook-dataset.csv` file and `images` directory are created. The book-cover images are downloaded and saved to the `images` directory. If you want to modify the name of output file and directory, check out `--output-csv` and `--output-image-dir` options.
+After running the above example command, check if `kyobobook-dataset.csv` file and `images` directory are created. The book-cover images are downloaded and saved to the `images` directory. If you want to modify the name of the output file and the directory, check out `--output-csv` and `--output-image-dir` options.
 
 More detailed options are in below. You can also see this by using `--help` option.
 ```
@@ -39,9 +39,13 @@ optional arguments:
 
 ## Results
 
-*Note: keywords are sorted by the similarity between the book and corresponding keywords. If you want to use only top-k keywords (truncate or limit the maximum keywords), it would be better to use the first k keywords.*
+*Note: keywords are sorted by the similarities between books and corresponding keywords. If you want to use only top-k keywords (truncate or limit the maximum keywords), it would be better to use the first k keywords.*
 
-*Note: there are some books without keywords. Statistically, about 20% of the books do not have their keywords. Consider excluding no-keyword-books because there are possibilities that they are abnormal.*
+*Note: there are some books without keywords. Statistically, about 30% of the books do not have their keywords. Consider excluding no-keyword-books because there is a possibility that they are abnormal.*
+
+You can see the crawled 128k book informations in [this file](./kyobobook-dataset.csv). Instead, you can download the entire dataset which consists of the book information file and their book-cover images from [this link](https://drive.google.com/file/d/1HIY32G-UBZzzYzHp1y-_1zwQp7CHO1CK/view?usp=sharing).
+
+Examples of the book information are like this:
 
 |title|author|publisher|published_date|class|barcode|category|keywords|
 |--|--|--|--|--|--|--|--|
