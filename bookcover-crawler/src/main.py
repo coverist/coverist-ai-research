@@ -10,6 +10,7 @@ from crawling import (
     get_book_cover_image,
     get_book_keywords_by_barcodes,
     get_book_list_by_page_and_date,
+    get_category_from_linkclass,
 )
 
 
@@ -89,7 +90,21 @@ def main(args: argparse.Namespace):
     for p in processes:
         p.join()
 
-    pd.DataFrame(total_book_info_list).to_csv(args.output_csv, index=False)
+    data = pd.DataFrame(total_book_info_list)
+    data["truncated_class"] = data["class"].str.slice(0, 6)
+
+    link_categories = []
+    for linkclass in tqdm.tqdm(data.truncated_class.unique()):
+        category = get_category_from_linkclass(linkclass)
+        link_categories.append(
+            {"truncated_class": linkclass, "category": " > ".join(category)}
+        )
+
+    link_categories = pd.DataFrame(link_categories)
+    data = pd.merge(data, link_categories, how="left", on="truncated_class")
+
+    columns = "title,author,publisher,published_date,class,barcode,category,keywords"
+    data[columns.split(",")].to_csv(args.output_csv, index=False)
 
 
 if __name__ == "__main__":

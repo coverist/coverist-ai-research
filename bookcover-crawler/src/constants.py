@@ -11,16 +11,21 @@ URL_BOOK_KEYWORD_API = "http://api.eigene.io/rec/kyobo002?format=jsonp&key={keyL
 URL_BOOK_COVER_XLARGE = (
     "http://image.kyobobook.co.kr/images/book/xlarge/{barcodeSplit}/x{barcode}.jpg"
 )
+URL_CATEGORY_FROM_LINKCLASS = (
+    "http://www.kyobobook.co.kr/categoryRenewal/categoryMain.laf?"
+    "linkClass={linkClass}&mallGb=KOR&orderClick=JAR"
+)
 
 CSS_SELECTOR_BOOK_TABLE_ROW = "dl.book_title"
 CSS_SELECTOR_BOOK_TITLE = "dt strong a"
 CSS_SELECTOR_BOOK_DESC = "dd"
+CSS_SELECTOR_CATEGORY_LOCATION = "p.location"
 
 REGEX_LINKCLASS_BARCODE_FROM_HREF = re.compile(
     r"javascript:goDetailProductNotAge\('KOR','\s*(\d*)\s*','\s*(\d*)\s*',.*\)"
 )
 REGEX_AUTHOR_PUBLISHER_DATE_FROM_DESC = re.compile(
-    r"^([^|]+) 지음 \|(?:[^|]*\|)? ([^|]+) \| (\d+)\D*(\d+)\D*(\d+).*"
+    r"^([^|]+) 지음 \|(?:[^|]*\|)?\s*([^|]+)\s*\| (\d+)\D*(\d+)\D*(\d+).*"
 )
 
 CHUNK_SIZE_FOR_KEYWORD_API = 20
