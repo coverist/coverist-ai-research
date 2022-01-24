@@ -1,4 +1,4 @@
-## BookCover Crawler
+# BookCover Crawler
 
 ## Introduction
 This project contains the codes for crawling book informations and their book-cover images from [교보문고](http://www.kyobobook.co.kr/index.laf?OV_REFFER=https://www.google.com/).
