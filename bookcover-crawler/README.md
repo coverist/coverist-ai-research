@@ -43,7 +43,7 @@ optional arguments:
 
 *Note: there are some books without keywords. Statistically, about 30% of the books do not have their keywords. Consider excluding no-keyword-books because there is a possibility that they are abnormal.*
 
-You can see the crawled 128k book informations in [this file](./kyobobook-dataset.csv). Instead, you can download the entire dataset which consists of the book information file and their book-cover images from [this link](https://drive.google.com/file/d/1HIY32G-UBZzzYzHp1y-_1zwQp7CHO1CK/view?usp=sharing).
+You can see the crawled 128k book informations in [this file](../resources/kyobobook-dataset.csv). Instead, you can download the entire dataset which consists of the book information file and their book-cover images from [this link](https://drive.google.com/file/d/1HIY32G-UBZzzYzHp1y-_1zwQp7CHO1CK/view?usp=sharing).
 
 Examples of the book information are like this:
 
