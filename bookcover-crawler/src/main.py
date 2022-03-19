@@ -112,6 +112,6 @@ if __name__ == "__main__":
     parser.add_argument("--start-date", default="201001")
     parser.add_argument("--end-date", default="202012")
     parser.add_argument("--output-csv", default="kyobobook-dataset.csv")
-    parser.add_argument("--output-image-dir", default="./images/")
+    parser.add_argument("--output-image-dir", default="./kyobobook-images/")
     parser.add_argument("--num-cores", type=int, default=mp.cpu_count())
     main(parser.parse_args())
