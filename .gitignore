@@ -178,3 +178,4 @@ cython_debug/
 *.csv
 *.zip
 !kyobobook-dataset.csv
+.DS_Store
