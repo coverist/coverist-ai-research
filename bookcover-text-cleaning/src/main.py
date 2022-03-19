@@ -32,7 +32,6 @@ def main(args: argparse.Namespace):
 
         for barcode, bbox in zip(batch_barcodes, batch_masks):
             result.append({"barcode": barcode, "bbox_list": json.dumps(bbox)})
-        break
 
     pd.DataFrame(result).to_csv(args.output_csv, index=False)
 
