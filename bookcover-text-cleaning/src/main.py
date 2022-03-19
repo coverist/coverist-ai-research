@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 
 import cv2
@@ -16,7 +17,7 @@ def read_image_by_barcode(barcode: str, base_dir: str) -> np.ndarray:
 
 
 def main(args: argparse.Namespace):
-    mask = BookCoverMask(args.lower_bounds)
+    mask = BookCoverMask(args.scaling_factor, args.lower_bounds)
 
     dataset = pd.read_csv(args.dataset_path, dtype={"barcode": str})
     barcodes = dataset.barcode.tolist()
@@ -29,28 +30,21 @@ def main(args: argparse.Namespace):
         ]
         batch_masks = mask.generate_masks(batch_images)
 
-        for barcode, image, bbox in zip(batch_barcodes, batch_images, batch_masks):
-            bbox_text = "\n".join(
-                [" ".join([f"{x} {y}" for x, y in bb]) for bb in bbox]
-            )
-            row_item = {
-                "barcode": barcode,
-                "width": image.shape[1],
-                "height": image.shape[0],
-                "bbox": bbox_text,
-            }
-            result.append(row_item)
+        for barcode, bbox in zip(batch_barcodes, batch_masks):
+            result.append({"barcode": barcode, "bbox_list": json.dumps(bbox)})
+        break
 
-    pd.DataFrame(result).to_csv(args.output_csv)
+    pd.DataFrame(result).to_csv(args.output_csv, index=False)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--output-csv", default="bookcover-text-masking.csv")
     parser.add_argument("--dataset-path", default="../resources/kyobobook-dataset.csv")
-    parser.add_argument("--image-dir", default="../resources/images")
+    parser.add_argument("--image-dir", default="../resources/kyobobook-images")
     parser.add_argument(
         "--lower-bounds", nargs="+", type=int, default=[0.3, 0.4, 0.5, 0.6]
     )
     parser.add_argument("--batch-size", type=int, default=32)
+    parser.add_argument("--scaling-factor", type=float, default=2.0)
     main(parser.parse_args())
