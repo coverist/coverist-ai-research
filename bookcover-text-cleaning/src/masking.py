@@ -16,8 +16,9 @@ class BookCoverMask:
     ) -> list[list[list[list[int]]]]:
         height, width, _ = np.mean([img.shape for img in batch_images], axis=0)
         height, width = height * self.scaling_factor, width * self.scaling_factor
+        height, width = int(height) // 8 * 8, int(width) // 8 * 8
 
-        batch_images, _ = reformat_input_batched(batch_images, int(width), int(height))
+        batch_images, _ = reformat_input_batched(batch_images, width, height)
         batch_horizontal_list, batch_free_list = self.reader.detect(
             batch_images, low_text=lower_bound, reformat=False
         )
