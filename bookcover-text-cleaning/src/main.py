@@ -32,18 +32,17 @@ def main(args: argparse.Namespace):
 
         for barcode, bbox in zip(batch_barcodes, batch_masks):
             result.append({"barcode": barcode, "bbox_list": json.dumps(bbox)})
-
     pd.DataFrame(result).to_csv(args.output_csv, index=False)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--output-csv", default="bookcover-text-masking.csv")
+    parser.add_argument("--output-csv", default="kyobobook-masking.csv")
     parser.add_argument("--dataset-path", default="../resources/kyobobook-dataset.csv")
     parser.add_argument("--image-dir", default="../resources/kyobobook-images")
     parser.add_argument(
         "--lower-bounds", nargs="+", type=int, default=[0.3, 0.4, 0.5, 0.6]
     )
     parser.add_argument("--batch-size", type=int, default=32)
-    parser.add_argument("--scaling-factor", type=float, default=2.0)
+    parser.add_argument("--scaling-factor", type=float, default=1.2)
     main(parser.parse_args())
