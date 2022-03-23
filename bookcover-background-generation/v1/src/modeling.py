@@ -318,7 +318,7 @@ class BigGANDiscriminator(nn.Module):
 
     def forward(self, input_images: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
         if input_images.dtype != self.conv.weight.dtype:
-            input_images = input_images.type_as(self.conv.weight.dtype)
+            input_images = input_images.type_as(self.conv.weight)
 
         hidden_state = self.conv(input_images)
         for i, layer in enumerate(self.layers):
