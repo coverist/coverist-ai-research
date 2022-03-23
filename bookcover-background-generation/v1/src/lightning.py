@@ -49,7 +49,9 @@ class BigGANTrainingModule(LightningModule):
         self, batch_size: Optional[int] = None, truncated: bool = False
     ) -> tuple[torch.Tensor, torch.Tensor]:
         batch_size = batch_size or self.config.train.batch_size
-        noise_vector = torch.randn((batch_size, self.noise_size), device=self.device)
+        noise_vector = torch.randn(
+            (batch_size, self.noise_size), dtype=self.dtype, device=self.device
+        )
         labels = torch.randint(0, self.num_classes, (batch_size,), device=self.device)
 
         if truncated:
@@ -68,7 +70,7 @@ class BigGANTrainingModule(LightningModule):
         noise_vectors, fake_labels = self.sample_random_inputs(real_images.size(0))
         fake_images = self.generator(noise_vectors, fake_labels)
 
-        real_logits = self.discriminator(real_images, real_labels)
+        real_logits = self.discriminator(real_images.type_as(self), real_labels)
         fake_logits = self.discriminator(fake_images, fake_labels)
 
         loss = (1 - real_logits).relu().mean() + (1 + fake_logits).relu().mean()
