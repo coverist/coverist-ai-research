@@ -36,10 +36,10 @@ optim:
 train:
   name: biggan-deep-128
   steps: 100000
-  batch_size: 16
-  accumulate_grads: 1
-  accumulate_standing_stats: 16
+  batch_size: 128
+  accumulate_grads: 16
+  accumulate_standing_stats: 32
   logging_interval: 1
   logging_images: 64
-  precision: 32
+  precision: 16
   gpus: 1
