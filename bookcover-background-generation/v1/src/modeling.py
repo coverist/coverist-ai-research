@@ -273,6 +273,9 @@ class BigGANGenerator(nn.Module):
     def forward(
         self, noise_vectors: torch.Tensor, labels: torch.Tensor
     ) -> torch.Tensor:
+        if noise_vectors.dtype != self.embeddings.weight.dtype:
+            noise_vectors = noise_vectors.type_as(self.embeddings.weight)
+
         conditional_state = torch.cat((noise_vectors, self.embeddings(labels)), dim=1)
         hidden_state = self.linear(conditional_state).view(
             conditional_state.size(0),
@@ -314,8 +317,10 @@ class BigGANDiscriminator(nn.Module):
         return module(*args, **kwargs)
 
     def forward(self, input_images: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
-        hidden_state = self.conv(input_images)
+        if input_images.dtype != self.conv.weight.dtype:
+            input_images = input_images.type_as(self.conv.weight.dtype)
 
+        hidden_state = self.conv(input_images)
         for i, layer in enumerate(self.layers):
             hidden_state = self.forward_module(layer, hidden_state)
             if i == self.config.attention_layer_position:
