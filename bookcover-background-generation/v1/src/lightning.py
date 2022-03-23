@@ -127,6 +127,10 @@ class BigGANTrainingModule(LightningModule):
         }
         return generator_optimizer, discriminator_optimizer
 
+    def on_load_checkpoint(self, checkpoint: dict[str, Any]):
+        if "amp_scaling_state" in checkpoint:
+            checkpoint.pop("amp_scaling_state")
+
 
 class BigGANDataModule(LightningDataModule):
     def __init__(self, config: DictConfig):
