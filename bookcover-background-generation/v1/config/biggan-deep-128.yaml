@@ -11,12 +11,12 @@ model:
     embedding_size: 128
     hidden_size_list: [2048, 2048, 2048, 1024, 1024, 512, 512, 256, 256, 128]
     attention_layer_position: 7
-    gradient_checkpointing: true
+    gradient_checkpointing: false
   discriminator:
     num_classes: 1443
     hidden_size_list: [256, 256, 512, 512, 1024, 1024, 2048, 2048, 2048, 2048]
     attention_layer_position: 1
-    gradient_checkpointing: true
+    gradient_checkpointing: false
   truncation_threshold: 1.0
 
 optim:
