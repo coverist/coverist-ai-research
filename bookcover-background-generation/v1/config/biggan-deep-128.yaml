@@ -1,0 +1,45 @@
+dataset:
+  filename: ../../resources/kyobobook-dataset.csv
+  imagedir: ../../resources/kyobobook-images
+  image_resolution: 128
+  dataloader_workers: -1
+
+model:
+  generator:
+    num_classes: 1443
+    noise_size: 128
+    embedding_size: 128
+    hidden_size_list: [2048, 2048, 2048, 1024, 1024, 512, 512, 256, 256, 128]
+    attention_layer_position: 7
+    gradient_checkpointing: true
+  discriminator:
+    num_classes: 1443
+    hidden_size_list: [256, 256, 512, 512, 1024, 1024, 2048, 2048, 2048, 2048]
+    attention_layer_position: 1
+    gradient_checkpointing: true
+  truncation_threshold: 1.0
+
+optim:
+  generator:
+    lr: 5e-5
+    betas: [0, 0.999]
+    eps: 1e-6
+  discriminator:
+    lr: 2e-4
+    betas: [0, 0.999]
+    eps: 1e-6
+  generator_ema:
+    decay: 0.9999
+    start_after: 10000
+  num_discriminator_steps: 2
+
+train:
+  name: biggan-deep-128
+  steps: 100000
+  batch_size: 16
+  accumulate_grads: 1
+  accumulate_standing_stats: 16
+  logging_interval: 1
+  logging_images: 64
+  precision: 32
+  gpus: 1
