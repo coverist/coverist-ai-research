@@ -177,5 +177,7 @@ cython_debug/
 *.jpg
 *.csv
 *.zip
+*.ckpt
+wandb
 !kyobobook-dataset.csv
 .DS_Store
