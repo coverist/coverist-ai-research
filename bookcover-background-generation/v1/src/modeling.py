@@ -123,7 +123,7 @@ class BigGANDiscriminatorConfig:
 class CondBatchNorm2d(nn.Module):
     def __init__(self, hidden_size: int, conditional_size: int):
         super().__init__()
-        self.batch_norm = nn.BatchNorm2d(hidden_size, affine=False)
+        self.batch_norm = nn.BatchNorm2d(hidden_size, eps=1e-4, affine=False)
         self.weight = nn.Linear(conditional_size, hidden_size)
         self.bias = nn.Linear(conditional_size, hidden_size)
 
@@ -257,13 +257,13 @@ class BigGANGenerator(nn.Module):
         self.layers = nn.ModuleList([BigGANGeneratorLayer(cfg) for cfg in config])
         self.attention = BigGANSelfAttention(config.attention_config)
 
-        self.batch_norm = nn.BatchNorm2d(config.last_hidden_size)
+        self.batch_norm = nn.BatchNorm2d(config.last_hidden_size, eps=1e-4)
         self.conv = nn.Conv2d(config.last_hidden_size, 3, 3, padding=1)
 
         for module in self.modules():
             if isinstance(module, (nn.Linear, nn.Conv2d, nn.Embedding)):
                 nn.init.orthogonal_(module.weight)
-                nn.utils.parametrizations.spectral_norm(module)
+                nn.utils.parametrizations.spectral_norm(module, eps=1e-6)
 
     def forward_module(self, module: nn.Module, *args: Any, **kwargs: Any) -> Any:
         if self.config.gradient_checkpointing and self.training:
@@ -309,7 +309,7 @@ class BigGANDiscriminator(nn.Module):
         for module in self.modules():
             if isinstance(module, (nn.Linear, nn.Conv2d, nn.Embedding)):
                 nn.init.orthogonal_(module.weight)
-                nn.utils.parametrizations.spectral_norm(module)
+                nn.utils.parametrizations.spectral_norm(module, eps=1e-6)
 
     def forward_module(self, module: nn.Module, *args: Any, **kwargs: Any) -> Any:
         if self.config.gradient_checkpointing and self.training:
