@@ -111,7 +111,7 @@ class BigGANTrainingModule(LightningModule):
 
         images = self.generator_ema(self.logging_noise_vectors, self.logging_labels)
         grid = torchvision.utils.make_grid(images, value_range=(-1, 1))
-        self.logger.log_image("val/images", [grid])
+        self.logger.log_image("val/images", [grid], self.global_step)
 
     def configure_optimizers(self) -> tuple[dict[str, Any]]:
         generator_params = self.generator.parameters()
