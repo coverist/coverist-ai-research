@@ -104,7 +104,7 @@ class BigGANTrainingModule(LightningModule):
 
         for module in self.generator_ema.modules():
             if isinstance(module, nn.BatchNorm2d):
-                module.momentum = 0
+                module.momentum = None
                 module.reset_running_stats()
                 module.train()
 
