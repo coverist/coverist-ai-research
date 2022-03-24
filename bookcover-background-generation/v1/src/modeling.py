@@ -326,7 +326,7 @@ class BigGANDiscriminator(nn.Module):
             if i == self.config.attention_layer_position:
                 hidden_state = self.forward_module(self.attention, hidden_state)
 
-        hidden_state = hidden_state.sum((2, 3))
+        hidden_state = hidden_state.relu().sum((2, 3))
         output_logits = (self.embeddings(labels) * hidden_state).sum(-1)
         output_logits = output_logits + self.linear(hidden_state).squeeze(-1)
 
