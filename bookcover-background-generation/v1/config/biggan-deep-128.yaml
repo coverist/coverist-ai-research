@@ -37,7 +37,7 @@ train:
   name: biggan-deep-128
   steps: 100000
   batch_size: 128
-  accumulate_grads: 16
+  accumulate_grads: 2
   accumulate_standing_stats: 32
   logging_interval: 1
   logging_images: 64
