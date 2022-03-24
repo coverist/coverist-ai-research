@@ -38,7 +38,7 @@ train:
   steps: 100000
   batch_size: 128
   accumulate_grads: 2
-  accumulate_standing_stats: 32
+  accumulate_standing_stats: 50
   logging_interval: 1
   logging_images: 64
   precision: 16
