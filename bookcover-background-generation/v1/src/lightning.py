@@ -91,7 +91,10 @@ class BigGANTrainingModule(LightningModule):
         decay = 0.0
         if self.global_step > self.config.optim.generator_ema.start_after:
             decay = self.config.optim.generator_ema.decay
+
         for p1, p2 in zip(self.generator_ema.parameters(), self.generator.parameters()):
+            p1.copy_(decay * p1.float() + (1 - decay) * p2.float())
+        for p1, p2 in zip(self.generator_ema.buffers(), self.generator.buffers()):
             p1.copy_(decay * p1.float() + (1 - decay) * p2.float())
 
     @torch.no_grad()
