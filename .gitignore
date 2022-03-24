@@ -180,4 +180,5 @@ cython_debug/
 *.ckpt
 wandb
 !kyobobook-dataset.csv
+!kyobobook-dataset-filtered.csv
 .DS_Store
