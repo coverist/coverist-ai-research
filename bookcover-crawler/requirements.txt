@@ -1,4 +1,5 @@
 pandas
 Pillow
 requests
+imagesize
 tqdm
