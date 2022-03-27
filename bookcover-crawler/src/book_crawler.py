@@ -49,11 +49,15 @@ class BookCrawler:
         if not book["with_cover"]:
             return
 
+        basedir = os.path.join(self.output_image_dir, *book["isbn"][-3:])
+        filename = os.path.join(basedir, f"{book['isbn']}.jpg")
+
+        if os.path.exists(filename):
+            return
+        os.makedirs(basedir, exist_ok=True)
+
         try:
             image = request_api.get_book_cover_image(self.sess, book["isbn"])
-
-            basedir = os.path.join(self.output_image_dir, *book["isbn"][-3:])
-            os.makedirs(basedir, exist_ok=True)
             image.save(os.path.join(basedir, f"{book['isbn']}.jpg"))
 
             book["cover_aspect_ratio"] = image.width / image.height
@@ -64,22 +68,25 @@ class BookCrawler:
     def collect_and_download(
         self, request_page: tuple[str, int, int]
     ) -> list[dict[str, Any]]:
-        book_list = request_api.get_book_list(self.sess, *request_page)
-        book_list = [book for book in book_list if book["minimal_age"] < 19]
+        try:
+            book_list = request_api.get_book_list(self.sess, *request_page)
+            book_list = [book for book in book_list if book["minimal_age"] < 19]
 
-        for book in book_list:
-            book["linkclass"] = request_page[0]
-            book["category"] = self.category_dict[request_page[0]]
+            for book in book_list:
+                book["linkclass"] = request_page[0]
+                book["category"] = self.category_dict[request_page[0]]
 
-        keywords_list = self.get_book_keywords_with_chunking(
-            [book["isbn"] for book in book_list]
-        )
-        for book, keywords in zip(book_list, keywords_list):
-            book["keywords"] = ",".join(keywords)
+            keywords_list = self.get_book_keywords_with_chunking(
+                [book["isbn"] for book in book_list]
+            )
+            for book, keywords in zip(book_list, keywords_list):
+                book["keywords"] = ",".join(keywords)
 
-        for book in book_list:
-            self.download_cover_image(book)
-        return book_list
+            for book in book_list:
+                self.download_cover_image(book)
+            return book_list
+        except Exception:
+            return []
 
     @staticmethod
     def create_request_pages_static(
