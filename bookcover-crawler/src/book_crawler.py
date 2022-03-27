@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from typing import Any, Optional
 
+import imagesize
 from requests import Session
 
 import request_api
@@ -53,6 +54,8 @@ class BookCrawler:
         filename = os.path.join(basedir, f"{book['isbn']}.jpg")
 
         if os.path.exists(filename):
+            width, height = imagesize.get(filename)
+            book["cover_aspect_ratio"] = width / height
             return
         os.makedirs(basedir, exist_ok=True)
 
@@ -85,7 +88,8 @@ class BookCrawler:
             for book in book_list:
                 self.download_cover_image(book)
             return book_list
-        except Exception:
+        except Exception as e:
+            print(e)
             return []
 
     @staticmethod
