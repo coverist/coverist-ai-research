@@ -51,15 +51,15 @@ class BookCrawler:
 
         try:
             image = request_api.get_book_cover_image(self.sess, book["isbn"])
+
+            basedir = os.path.join(self.output_image_dir, *book["isbn"][-3:])
+            os.makedirs(basedir, exist_ok=True)
+            image.save(os.path.join(basedir, f"{book['isbn']}.jpg"))
+
+            book["cover_aspect_ratio"] = image.width / image.height
         except Exception:
             book["with_cover"] = False
             return
-
-        book["cover_aspect_ratio"] = image.width / image.height
-        basedir = os.path.join(self.output_image_dir, *book["isbn"][-3:])
-
-        os.makedirs(basedir, exist_ok=True)
-        image.save(os.path.join(basedir, f"{book['isbn']}.jpg"))
 
     def collect_and_download(
         self, request_page: tuple[str, int, int]
