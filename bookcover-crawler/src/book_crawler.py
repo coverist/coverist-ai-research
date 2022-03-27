@@ -58,7 +58,7 @@ class BookCrawler:
 
         try:
             image = request_api.get_book_cover_image(self.sess, book["isbn"])
-            image.save(os.path.join(basedir, f"{book['isbn']}.jpg"))
+            image.save(filename)
 
             book["cover_aspect_ratio"] = image.width / image.height
         except Exception:
