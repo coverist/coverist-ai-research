@@ -1,4 +1,3 @@
-albumentations
 numpy
 omegaconf
 opencv_python_headless
