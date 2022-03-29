@@ -119,7 +119,7 @@ class BigGANDiscriminatorConfig:
             input_dim=self.hidden_dims[max(0, index - 1)],
             middle_dim=self.hidden_dims[max(0, index - 1)] // self.middle_reduction,
             output_dim=self.hidden_dims[index],
-            upsampling=2 if (index + 1) % self.layers_in_block == 0 else 1,
+            downsampling=2 if (index + 1) % self.layers_in_block == 0 else 1,
         )
 
     def __iter__(self) -> Iterator[BigGANDiscriminatorLayerConfig]:
