@@ -24,13 +24,8 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 def main(config: DictConfig):
     module = BigGANTrainingModule(config)
     datamodule = BigGANDataModule(config)
+    checkpoint = ModelCheckpoint(monitor="step", mode="max", save_top_k=3)
 
-    checkpoint = ModelCheckpoint(
-        monitor="step",
-        mode="max",
-        save_top_k=3,
-        every_n_epochs=config.train.logging_interval,
-    )
     Trainer(
         gpus=config.train.gpus,
         logger=WandbLogger(project="bookcover-generation", name=config.train.name),
