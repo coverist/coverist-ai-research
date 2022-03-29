@@ -148,7 +148,7 @@ class BigGANSelfAttention(nn.Module):
         self.value = nn.Conv2d(config.hidden_dim, config.value_dim, 1, bias=False)
 
         self.gating = nn.Parameter(torch.zeros(()))
-        self.output = nn.Conv2d(config.value_dim, config.hidden_dim)
+        self.output = nn.Conv2d(config.value_dim, config.hidden_dim, 1, bias=False)
 
     def forward(self, hidden: torch.Tensor) -> torch.Tensor:
         query, key, value = self.query(hidden), self.key(hidden), self.value(hidden)
