@@ -1,5 +1,5 @@
 dataset:
-  filename: ../../resources/kyobobook-dataset.csv
+  filename: ../../resources/kyobobook-dataset.jsonl
   image_dir: ../../resources/kyobobook-images
   image_size: 128
   dataloader_workers: -1
