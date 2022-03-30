@@ -39,7 +39,7 @@ class BigGANTrainingModule(LightningModule):
     def training_step(
         self,
         batch: dict[str, dict[str, torch.Tensor]],
-        batch_index: int,
+        batch_idx: int,
         optimizer_idx: int,
     ) -> torch.Tensor:
         if optimizer_idx == 0:
@@ -86,7 +86,9 @@ class BigGANTrainingModule(LightningModule):
                 module.reset_running_stats()
                 module.train()
 
-    def validation_step(self, batch: dict[str, torch.Tensor]) -> torch.Tensor:
+    def validation_step(
+        self, batch: dict[str, torch.Tensor], batch_idx: int
+    ) -> torch.Tensor:
         return self.generator_ema(*batch)
 
     def validation_epoch_end(self, outputs: list[torch.Tensor]):
