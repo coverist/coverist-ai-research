@@ -123,7 +123,7 @@ class BigGANDataModule(LightningDataModule):
         )
 
     def setup(self, stage: Optional[str] = None):
-        dataset = pd.read_json(self.config.dataset.filename, lines=True, dtype=None)
+        dataset = pd.read_json(self.config.dataset.filename, lines=True, dtype=False)
         dataset = dataset[dataset.with_cover]
         dataset = dataset[dataset.cover_aspect_rato < 0.9]
         self.labels = sorted(dataset.category.unique())
