@@ -1,14 +1,15 @@
 import os
+import random
 from typing import Any, Optional
 
 import pandas as pd
 import torch
 import torch.nn as nn
-import torchvision
 from omegaconf import DictConfig
 from pytorch_lightning import LightningDataModule, LightningModule
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
+from torchvision.utils import make_grid
 
 from dataset import BigGANImageDataset, BigGANRandomDataset
 from modeling import (
@@ -88,12 +89,17 @@ class BigGANTrainingModule(LightningModule):
 
     def validation_step(
         self, batch: dict[str, torch.Tensor], batch_idx: int
-    ) -> torch.Tensor:
-        return self.generator_ema(**batch)
+    ) -> dict[str, torch.Tensor]:
+        batch_size = random.randint(0, batch["latents"].size(0))
+        self.generator_ema(batch["latents"][:batch_size], batch["labels"][:batch_size])
+        return batch
 
     def validation_epoch_end(self, outputs: list[torch.Tensor]):
-        grid = torchvision.utils.make_grid(outputs[-1], value_range=(-1, 1))
-        self.logger.log_image("val/images", [grid], self.global_step)
+        self.generator_ema.eval()
+        self.logger.log_image(
+            "val/images",
+            [make_grid(self.generator_ema(**outputs[0]), value_range=(-1, 1))],
+        )
 
     def configure_optimizers(self) -> tuple[dict[str, Any]]:
         generator_params = self.generator.parameters()
