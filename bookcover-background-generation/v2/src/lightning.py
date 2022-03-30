@@ -77,7 +77,7 @@ class BigGANTrainingModule(LightningModule):
         for p1, p2 in zip(self.generator.parameters(), self.generator_ema.parameters()):
             p2.copy_(decay * p2.float() + (1 - decay) * p1.float())
         for b1, b2 in zip(self.generator.buffers(), self.generator_ema.buffers()):
-            p2.copy_(decay * p2.float() + (1 - decay) * p1.float())
+            b2.copy_(decay * b2.float() + (1 - decay) * b1.float())
 
     def on_validation_epoch_start(self):
         for module in self.generator_ema.modules():
