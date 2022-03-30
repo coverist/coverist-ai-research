@@ -99,7 +99,7 @@ class BigGANTrainingModule(LightningModule):
         images = self.generator_ema(**outputs[0])
         self.logger.log_image(
             "val/images",
-            [make_grid(images, nrows=int(images.size(0) ** 0.5), value_range=(-1, 1))],
+            [make_grid(images, nrow=int(images.size(0) ** 0.5), value_range=(-1, 1))],
         )
 
     def configure_optimizers(self) -> tuple[dict[str, Any]]:
