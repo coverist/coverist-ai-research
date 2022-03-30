@@ -97,8 +97,10 @@ class BigGANTrainingModule(LightningModule):
     def validation_epoch_end(self, outputs: list[torch.Tensor]):
         self.generator_ema.eval()
         images = self.generator_ema(**outputs[0])
-        images = images[: int(images.size(0) ** 0.5) ** 2]
-        self.logger.log_image("val/images", [make_grid(images, value_range=(-1, 1))])
+        self.logger.log_image(
+            "val/images",
+            [make_grid(images, nrows=int(images.size(0) ** 0.5), value_range=(-1, 1))],
+        )
 
     def configure_optimizers(self) -> tuple[dict[str, Any]]:
         generator_params = self.generator.parameters()
