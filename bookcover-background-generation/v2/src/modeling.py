@@ -166,7 +166,11 @@ class BigGANSelfAttention(nn.Module):
 class BigGANGeneratorLayer(nn.Module):
     def __init__(self, config: BigGANGeneratorLayerConfig):
         super().__init__()
-        self.upsampling = nn.UpsamplingNearest2d(scale_factor=config.upsampling)
+        self.upsampling = (
+            nn.UpsamplingNearest2d(scale_factor=config.upsampling)
+            if config.upsampling > 1
+            else nn.Identity()
+        )
 
         self.bn1 = CondBatchNorm2d(config.input_dim, config.conditional_dim)
         self.bn2 = CondBatchNorm2d(config.middle_dim, config.conditional_dim)
@@ -192,7 +196,11 @@ class BigGANGeneratorLayer(nn.Module):
 class BigGANDiscriminatorLayer(nn.Module):
     def __init__(self, config: BigGANDiscriminatorLayerConfig):
         super().__init__()
-        self.downsampling = nn.AvgPool2d(config.downsampling, config.downsampling)
+        self.downsampling = (
+            nn.AvgPool2d(config.downsampling, config.downsampling)
+            if config.downsampling > 1
+            else nn.Identity()
+        )
 
         self.conv1 = nn.Conv2d(config.input_dim, config.middle_dim, 1)
         self.conv2 = nn.Conv2d(config.middle_dim, config.middle_dim, 3, padding=1)
