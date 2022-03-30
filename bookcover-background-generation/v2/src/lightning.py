@@ -128,6 +128,10 @@ class BigGANDataModule(LightningDataModule):
         dataset = pd.read_json(self.config.dataset.filename, lines=True, dtype=False)
         dataset = dataset[dataset.with_cover]
         dataset = dataset[dataset.cover_aspect_ratio < 0.9]
+
+        num_standing_samples = (
+            self.config.optim.num_standing_stats * self.config.train.batch_size
+        )
         self.labels = sorted(dataset.category.unique())
 
         self.train_image_dataset = BigGANImageDataset(
@@ -143,11 +147,12 @@ class BigGANDataModule(LightningDataModule):
             num_samples=len(self.train_image_dataset),
             truncation=None,
         )
+
         self.val_random_dataset = BigGANRandomDataset(
             dataset,
             latent_dim=self.config.model.generator.latent_dim,
             num_labels=len(self.labels),
-            num_samples=self.config.optim.num_standing_stats,
+            num_samples=num_standing_samples,
             truncation=self.config.model.truncation,
         )
 
