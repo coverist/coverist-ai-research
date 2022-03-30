@@ -48,7 +48,7 @@ class BigGANTrainingModule(LightningModule):
             self.discriminator.requires_grad_(False)
             self.discriminator.eval()
 
-            images = self.generator(*batch["random_g"])
+            images = self.generator(**batch["random_g"])
             loss = -self.discriminator(images, batch["random_g"]["labels"]).mean()
             self.log("train/generator_loss", loss)
         elif optimizer_idx == 1:
@@ -57,9 +57,9 @@ class BigGANTrainingModule(LightningModule):
             self.discriminator.requires_grad_(True)
             self.discriminator.train()
 
-            fake_images = self.generator(*batch["random_d"])
+            fake_images = self.generator(**batch["random_d"])
             fake_logits = self.discriminator(fake_images, batch["random_d"]["labels"])
-            real_logits = self.discriminator(*batch["image"])
+            real_logits = self.discriminator(**batch["image"])
 
             loss = (1 - real_logits).relu().mean() + (1 + fake_logits).relu().mean()
             self.log("train/discriminator_loss", loss)
@@ -89,7 +89,7 @@ class BigGANTrainingModule(LightningModule):
     def validation_step(
         self, batch: dict[str, torch.Tensor], batch_idx: int
     ) -> torch.Tensor:
-        return self.generator_ema(*batch)
+        return self.generator_ema(**batch)
 
     def validation_epoch_end(self, outputs: list[torch.Tensor]):
         grid = torchvision.utils.make_grid(outputs[-1], value_range=(-1, 1))
