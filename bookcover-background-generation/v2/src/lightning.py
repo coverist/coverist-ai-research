@@ -90,13 +90,13 @@ class BigGANTrainingModule(LightningModule):
     def validation_step(
         self, batch: dict[str, torch.Tensor], batch_idx: int
     ) -> dict[str, torch.Tensor]:
-        batch_size = random.randint(0, batch["latents"].size(0))
+        batch_size = random.randint(1, batch["latents"].size(0) + 1)
         self.generator_ema(batch["latents"][:batch_size], batch["labels"][:batch_size])
         return batch
 
     def validation_epoch_end(self, outputs: list[torch.Tensor]):
         self.generator_ema.eval()
-        images = self.generator_ema(**outputs[0])
+        images = self.generator_ema(**outputs[-1])
         self.logger.log_image(
             "val/images",
             [make_grid(images, nrow=int(images.size(0) ** 0.5), value_range=(-1, 1))],
