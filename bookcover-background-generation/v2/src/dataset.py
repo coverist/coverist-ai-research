@@ -26,7 +26,7 @@ class BigGANImageDataset(Dataset):
 
         image = cv2.imread(filename)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        image = cv2.resize(image, (self.image_size, self.image_size))
+        image = cv2.resize(image, (self.image_size, self.image_size)).transpose(2, 0, 1)
 
         return {
             "images": torch.from_numpy(2 * image.astype(np.float32) / 0xFF - 1),
