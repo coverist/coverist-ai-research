@@ -33,8 +33,7 @@ def main(config: DictConfig):
         precision=config.train.precision,
         max_steps=config.train.steps,
         amp_backend=amp_backend,
-        val_check_interval=min(config.train.validation_interval, 1.0),
-        check_val_every_n_epoch=max(int(config.train.validation_interval), 1),
+        check_val_every_n_epoch=config.train.validation_interval,
         accumulate_grad_batches=config.train.accumulate_grads,
         log_every_n_steps=10,
     ).fit(module, datamodule)

@@ -53,5 +53,5 @@ class BigGANRandomDataset(Dataset):
         )
         return {
             "latents": torch.from_numpy(latent),
-            "labels": torch.randint(0, self.num_labels, dtype=torch.long),
+            "labels": torch.randint(0, self.num_labels, size=(), dtype=torch.long),
         }
