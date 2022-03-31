@@ -37,7 +37,7 @@ train:
   name: biggan-deep-128
   steps: 200000
   batch_size: 128
-  accumulate_grads: 2
+  accumulate_grads: 16
   validation_interval: 1
   precision: 16
   gpus: 1
