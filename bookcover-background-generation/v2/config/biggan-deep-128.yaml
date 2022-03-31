@@ -29,13 +29,13 @@ optim:
     eps: 1e-6
   generator_ema:
     decay: 0.9999
-    start_after: 10000
+    start_after: 20000
   num_discriminator_steps: 2
   num_standing_stats: 100
 
 train:
   name: biggan-deep-128
-  steps: 100000
+  steps: 200000
   batch_size: 128
   accumulate_grads: 2
   validation_interval: 1

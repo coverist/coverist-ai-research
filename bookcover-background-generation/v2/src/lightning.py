@@ -85,7 +85,7 @@ class BigGANTrainingModule(LightningModule):
             if isinstance(module, nn.BatchNorm2d):
                 module.momentum = None
                 module.reset_running_stats()
-                module.train()
+        self.generator_ema.train()
 
     def validation_step(
         self, batch: dict[str, torch.Tensor], batch_idx: int
