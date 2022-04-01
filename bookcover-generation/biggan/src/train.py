@@ -10,13 +10,6 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 
-try:
-    import apex
-
-    amp_backend = apex.__name__
-except ModuleNotFoundError:
-    amp_backend = "native"
-
 warnings.filterwarnings("ignore")
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -38,7 +31,6 @@ def main(
         callbacks=[checkpoint],
         precision=config.train.precision,
         max_steps=config.train.steps,
-        amp_backend=amp_backend,
         check_val_every_n_epoch=config.train.validation_interval,
         accumulate_grad_batches=config.train.accumulate_grads,
         log_every_n_steps=10,
