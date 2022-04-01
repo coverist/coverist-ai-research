@@ -63,6 +63,7 @@ class BigGANTrainingModule(LightningModule):
 
             loss = (1 - real_logits).relu().mean() + (1 + fake_logits).relu().mean()
             self.log("train/discriminator_loss", loss)
+        self.log("step", self.global_step)
         return loss
 
     @torch.no_grad()
