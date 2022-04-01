@@ -244,7 +244,7 @@ class BigGANGenerator(nn.Module):
         for module in self.modules():
             if isinstance(module, (nn.Linear, nn.Conv2d, nn.Embedding)):
                 nn.init.orthogonal_(module.weight)
-                nn.utils.parametrizations.spectral_norm(module, eps=1e-6)
+                nn.utils.parametrizations.spectral_norm(module, eps=1e-4)
 
     def forward(self, latents: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
         latents = latents.type_as(self.embeddings.weight)
@@ -291,7 +291,7 @@ class BigGANDiscriminator(nn.Module):
         for module in self.modules():
             if isinstance(module, (nn.Linear, nn.Conv2d, nn.Embedding)):
                 nn.init.orthogonal_(module.weight)
-                nn.utils.parametrizations.spectral_norm(module, eps=1e-6)
+                nn.utils.parametrizations.spectral_norm(module, eps=1e-4)
 
     def forward(self, images: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
         images = images.type_as(self.conv.weight)
