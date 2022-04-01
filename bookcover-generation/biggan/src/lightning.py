@@ -5,12 +5,6 @@ from typing import Any, Optional
 import pandas as pd
 import torch
 import torch.nn as nn
-from omegaconf import DictConfig
-from pytorch_lightning import LightningDataModule, LightningModule
-from torch.optim import Optimizer
-from torch.utils.data import DataLoader
-from torchvision.utils import make_grid
-
 from dataset import BigGANImageDataset, BigGANRandomDataset
 from modeling import (
     BigGANDiscriminator,
@@ -18,6 +12,11 @@ from modeling import (
     BigGANGenerator,
     BigGANGeneratorConfig,
 )
+from omegaconf import DictConfig
+from pytorch_lightning import LightningDataModule, LightningModule
+from torch.optim import Optimizer
+from torch.utils.data import DataLoader
+from torchvision.utils import make_grid
 
 try:
     from apex.optimizers import FusedAdam as Adam
@@ -117,8 +116,8 @@ class BigGANTrainingModule(LightningModule):
         return generator_optimizer, discriminator_optimizer
 
     def on_load_checkpoint(self, checkpoint: dict[str, Any]):
-        if "amp_scaling_state" in checkpoint:
-            checkpoint.pop("amp_scaling_state")
+        if "ApexMixedPrecisionPlugin" in checkpoint:
+            checkpoint.pop("ApexMixedPrecisionPlugin")
 
 
 class BigGANDataModule(LightningDataModule):
