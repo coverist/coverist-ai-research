@@ -82,13 +82,13 @@ class BigGANTrainingModule(LightningModule):
             b2.copy_(b1)
 
     def on_validation_epoch_start(self):
+        self.generator_ema.train()
         for module in self.generator_ema.modules():
             if isinstance(module, nn.BatchNorm2d):
                 module.momentum = None
                 module.reset_running_stats()
             elif is_parametrized(module):
                 [module.weight for _ in range(15)]
-        self.generator_ema.train()
 
     def validation_step(
         self, batch: dict[str, torch.Tensor], batch_idx: int
