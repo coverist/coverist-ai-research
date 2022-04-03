@@ -14,6 +14,7 @@ from modeling import (
 )
 from omegaconf import DictConfig
 from pytorch_lightning import LightningDataModule, LightningModule
+from torch.nn.utils.parametrize import is_parametrized
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 from torchvision.utils import make_grid
@@ -78,13 +79,15 @@ class BigGANTrainingModule(LightningModule):
         for p1, p2 in zip(self.generator.parameters(), self.generator_ema.parameters()):
             p2.copy_(decay * p2.float() + (1 - decay) * p1.float())
         for b1, b2 in zip(self.generator.buffers(), self.generator_ema.buffers()):
-            b2.copy_(decay * b2.float() + (1 - decay) * b1.float())
+            b2.copy_(b1)
 
     def on_validation_epoch_start(self):
         for module in self.generator_ema.modules():
             if isinstance(module, nn.BatchNorm2d):
                 module.momentum = None
                 module.reset_running_stats()
+            elif is_parametrized(module):
+                [module.weight for _ in range(15)]
         self.generator_ema.train()
 
     def validation_step(
