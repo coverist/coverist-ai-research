@@ -32,7 +32,7 @@ class VQVAETrainingModule(LightningModule):
         super().__init__()
         self.config = config
         self.encoder = VQVAEEncoder(VQVAEEncoderConfig(**config.model.encoder))
-        self.decoder = VQVAEDecoder(VQVAEDecoderConfig(**config.model.encoder))
+        self.decoder = VQVAEDecoder(VQVAEDecoderConfig(**config.model.decoder))
         self.quantizer = VQVAEQuantizer(VQVAEQuantizerConfig(**config.model.quantizer))
 
     def forward(self, images: torch.Tensor) -> tuple[torch.Tensor, ...]:
