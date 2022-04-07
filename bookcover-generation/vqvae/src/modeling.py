@@ -78,7 +78,7 @@ class VQVAEQuantizer(nn.Module):
         if quantized is not None:
             return quantized, self.embeddings(quantized).permute(0, 3, 1, 2)
 
-        quantized = F.gumbel_softmax(logits, dim=1)
+        quantized = F.gumbel_softmax(logits, tau=0.5, dim=1)
         embeddings = torch.einsum("bnhw,nd->bdhw", quantized, self.embeddings.weight)
         return quantized, embeddings
 
