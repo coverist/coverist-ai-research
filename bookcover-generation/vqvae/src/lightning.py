@@ -50,6 +50,7 @@ class VQVAETrainingModule(LightningModule):
         self.log("train/loss", loss)
         self.log("train/loss_recon", loss_recon)
         self.log("train/loss_embed", loss_embed)
+        self.log("step", self.global_step)
         return loss
 
     def validation_step(
@@ -64,7 +65,7 @@ class VQVAETrainingModule(LightningModule):
     def validation_epoch_end(self, outputs: list[tuple[torch.Tensor, torch.Tensor]]):
         images = torch.stack(outputs[0], dim=1).flatten(0, 1)
         images = make_grid(images, int(images.size(0) ** 0.5), value_range=(-1, 1))
-        self.logger.log_image("val/reconstruct", images)
+        self.logger.log_image("val/reconstruct", [images])
 
     def configure_optimizers(self) -> tuple[list[Optimizer], list[LRScheduler]]:
         optimizer = Adam(self.parameters(), **self.config.optim)
