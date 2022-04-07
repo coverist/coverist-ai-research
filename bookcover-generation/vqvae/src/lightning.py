@@ -46,8 +46,8 @@ class VQVAETrainingModule(LightningModule):
 
         loss_recon = (images - decoded).abs().mean()
         loss_kld = F.kl_div(
-            logits.log_softmax(-1),
             uniform.log(),
+            logits.log_softmax(-1),
             reduction="batchmean",
             log_target=True,
         )
