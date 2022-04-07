@@ -2,7 +2,7 @@ dataset:
   pattern: ../../resources/kyobobook-images/**/*.jpg
   resolution: 256
   validation_ratio: 0.001
-  dataloader_worker: -1
+  dataloader_workers: -1
 
 model:
   encoder:
