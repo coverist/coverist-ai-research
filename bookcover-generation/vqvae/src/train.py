@@ -19,7 +19,7 @@ def main(
     Trainer(
         gpus=config.train.gpus,
         logger=WandbLogger(
-            project="bookcover-generation", name=config.train.name, id=resume_id
+            project="bookcover-generation-vqvae", name=config.train.name, id=resume_id
         ),
         callbacks=[checkpoint],
         precision=config.train.precision,
