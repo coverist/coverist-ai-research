@@ -70,6 +70,7 @@ class VQVAETrainingModule(LightningModule):
         self.log("val/loss", loss)
         self.log("val/loss_recon", loss_recon)
         self.log("val/loss_kld", loss_kld)
+        self.log("step", self.global_step)
         return images, decoded
 
     def validation_epoch_end(self, outputs: list[tuple[torch.Tensor, torch.Tensor]]):
