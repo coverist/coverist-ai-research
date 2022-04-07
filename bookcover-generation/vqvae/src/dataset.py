@@ -1,4 +1,5 @@
 import glob
+import random
 
 import cv2
 import torch
@@ -15,6 +16,9 @@ class ImageDataset(Dataset):
 
     def __getitem__(self, index: str) -> torch.Tensor:
         image = cv2.imread(self.filenames[index])
+        if image is None:
+            return self[random.randint(0, len(self))]
+
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         image = cv2.resize(image, (self.resolution, self.resolution))
 
