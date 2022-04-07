@@ -50,7 +50,7 @@ class VQVAETrainingModule(LightningModule):
         return decoded, loss, loss_recon, loss_kld
 
     def training_step(self, images: torch.Tensor, batch_idx: int) -> torch.Tensor:
-        _, loss, loss, loss_recon, loss_kld = self(images)
+        _, loss, loss_recon, loss_kld = self(images)
         self.log("train/loss", loss)
         self.log("train/loss_recon", loss_recon)
         self.log("train/loss_kld", loss_kld)
