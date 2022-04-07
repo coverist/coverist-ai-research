@@ -127,9 +127,7 @@ class VQVAEQuantizer(nn.Module):
         super().__init__()
         self.config = config
         self.embeddings = nn.Embedding(config.num_embeddings, config.embedding_dim)
-
         self.embeddings.requires_grad_(False)
-        self.embeddings.weight.normal_(0, 0.02)
 
     def forward(
         self,
