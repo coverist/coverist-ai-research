@@ -87,7 +87,10 @@ class VQVAEDataModule(LightningDataModule):
         )
 
     def setup(self, stage: Optional[str] = None):
-        dataset = ImageDataset(self.config.data.pattern, self.config.data.resolution)
+        dataset = ImageDataset(
+            pattern=self.config.dataset.pattern,
+            resolution=self.config.dataset.resolution,
+        )
         train_indices, val_indices = train_test_split(
             range(len(dataset)),
             test_size=self.config.data.validation_ratio,
