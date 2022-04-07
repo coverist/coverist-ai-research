@@ -18,4 +18,6 @@ class ImageDataset(Dataset):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         image = cv2.resize(image, (self.resolution, self.resolution))
 
-        return 2 * torch.from_numpy(image).permute(2, 0, 1).float() / 0xFF - 1
+        image = torch.from_numpy(image)
+        image = 2 * image.permute(2, 0, 1).float() / 0xFF - 1
+        return image
