@@ -3,7 +3,6 @@ from typing import Any, Optional
 
 import torch
 import torch.nn.functional as F
-import wandb
 from omegaconf import DictConfig
 from pytorch_lightning import LightningDataModule, LightningModule
 from sklearn.model_selection import train_test_split
