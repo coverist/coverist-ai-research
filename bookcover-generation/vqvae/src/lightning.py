@@ -93,7 +93,7 @@ class VQVAEDataModule(LightningDataModule):
         )
         train_indices, val_indices = train_test_split(
             range(len(dataset)),
-            test_size=self.config.data.validation_ratio,
+            test_size=self.config.dataset.validation_ratio,
             random_state=42,
             shuffle=True,
         )
