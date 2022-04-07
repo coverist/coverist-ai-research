@@ -69,7 +69,7 @@ class VQVAETrainingModule(LightningModule):
 
     def validation_epoch_end(self, outputs: list[tuple[torch.Tensor, torch.Tensor]]):
         quantized = torch.cat([x[1] for x in outputs], dim=0)
-        self.log("val/quantized", wandb.Histogram(quantized.cpu()))
+        wandb.log({"val/quantized", wandb.Histogram(quantized.cpu())})
 
         images = torch.stack((outputs[0][0], outputs[0][2]), dim=1).flatten(0, 1)
         images = make_grid(images, int(images.size(0) ** 0.5), value_range=(-1, 1))
