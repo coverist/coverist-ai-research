@@ -41,7 +41,7 @@ class VQVAETrainingModule(LightningModule):
         decodings = self.decoder(quantized_encodings)
 
         loss_recon = (images - decodings).abs().mean()
-        loss_embed = (encodings - quantized_encodings).square().mean()
+        loss_embed = (encodings - quantized_encodings.detach()).square().mean()
         loss = loss_recon + loss_embed
         return decodings, loss, loss_recon, loss_embed
 
