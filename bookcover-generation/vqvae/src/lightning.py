@@ -39,7 +39,7 @@ class VQVAETrainingModule(LightningModule):
 
     def forward(self, images: torch.Tensor) -> tuple[torch.Tensor, ...]:
         logits = self.encoder(images)
-        quantized, embeddings = self.quantizer(logits)
+        _, embeddings = self.quantizer(logits)
         decoded = self.decoder(embeddings)
 
         log_probs = logits.permute(0, 2, 3, 1).flatten(0, 2).log_softmax(-1)
@@ -48,10 +48,10 @@ class VQVAETrainingModule(LightningModule):
         loss_recon = (images - decoded).abs().mean()
         loss_kld = F.kl_div(log_uniform, log_probs, reduce="batchmean", log_target=True)
         loss = loss_recon + 1e-4 * loss_kld
-        return quantized, decoded, loss, loss_recon, loss_kld
+        return decoded, loss, loss_recon, loss_kld
 
     def training_step(self, images: torch.Tensor, batch_idx: int) -> torch.Tensor:
-        _, _, loss, loss, loss_recon, loss_kld = self(images)
+        _, loss, loss, loss_recon, loss_kld = self(images)
         self.log("train/loss", loss)
         self.log("train/loss_recon", loss_recon)
         self.log("train/loss_kld", loss_kld)
@@ -60,18 +60,15 @@ class VQVAETrainingModule(LightningModule):
 
     def validation_step(
         self, images: torch.Tensor, batch_idx: int
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        quantized, decoded, loss, loss_recon, loss_kld = self(images)
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        decoded, loss, loss_recon, loss_kld = self(images)
         self.log("val/loss", loss)
         self.log("val/loss_recon", loss_recon)
         self.log("val/loss_kld", loss_kld)
-        return images, quantized, decoded
+        return images, decoded
 
     def validation_epoch_end(self, outputs: list[tuple[torch.Tensor, torch.Tensor]]):
-        quantized = torch.cat([x[1] for x in outputs], dim=0)
-        wandb.log({"val/quantized", wandb.Histogram(quantized.cpu())})
-
-        images = torch.stack((outputs[0][0], outputs[0][2]), dim=1).flatten(0, 1)
+        images = torch.stack(outputs[0], dim=1).flatten(0, 1)
         images = make_grid(images, int(images.size(0) ** 0.5), value_range=(-1, 1))
         self.logger.log_image("val/reconstruct", [images])
 
