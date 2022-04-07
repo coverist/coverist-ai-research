@@ -28,8 +28,8 @@ optim:
 
 train:
   name: vqvae-256-8192
-  epochs: 200
-  batch_size: 256
+  epochs: 20
+  batch_size: 64
   accumulate_grads: 1
   validation_interval: 1
   precision: 16
