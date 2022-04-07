@@ -74,8 +74,11 @@ class VQVAETrainingModule(LightningModule):
 
     def validation_epoch_end(self, outputs: list[tuple[torch.Tensor, torch.Tensor]]):
         images = torch.stack(outputs[0], dim=1).flatten(0, 1)
-        nrow = int(images.size(0) ** 0.5) // 2 * 2
-        images = make_grid(images, nrow, value_range=(-1, 1))
+        images = make_grid(
+            images,
+            nrow=int(images.size(0) ** 0.5) // 2 * 2,
+            value_range=(-1, 1),
+        )
         self.logger.log_image("val/reconstruct", [images])
 
     def configure_optimizers(self) -> tuple[list[Optimizer], list[LRScheduler]]:
