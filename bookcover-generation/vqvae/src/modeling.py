@@ -4,6 +4,13 @@ from typing import Optional
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+
+
+@dataclass
+class VQVAEQuantizerConfig:
+    num_embeddings: int = 8192
+    embedding_dim: int = 128
 
 
 @dataclass
@@ -21,7 +28,7 @@ class VQVAEEncoderConfig:
     num_layers: tuple[int] = (2, 2, 4, 4, 8)
     hidden_dims: tuple[int] = (128, 256, 512, 1024, 2048)
     middle_reduction: int = 4
-    embedding_dim: int = 128
+    num_embeddings: int = 8192
 
     def __iter__(self) -> Generator[VQVAELayerConfig]:
         for i, num_layers in enumerate(self.num_layers):
@@ -55,11 +62,25 @@ class VQVAEDecoderConfig:
                 )
 
 
-@dataclass
-class VQVAEQuantizerConfig:
-    num_embeddings: int = 8192
-    embedding_dim: int = 128
-    ema_decay: float = 0.99
+class VQVAEQuantizer(nn.Module):
+    def __init__(self, config: VQVAEQuantizerConfig):
+        super().__init__()
+        self.config = config
+        self.embeddings = nn.Embedding(config.num_embeddings, config.embedding_dim)
+
+    def forward(
+        self,
+        logits: Optional[torch.Tensor] = None,
+        quantized: Optional[torch.Tensor] = None,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        if quantized is None and not self.training:
+            quantized = logits.argmax(dim=1)
+        if quantized is not None:
+            return quantized, self.embeddings(quantized).permute(0, 3, 1, 2)
+
+        quantized = F.gumbel_softmax(logits, dim=1)
+        embeddings = torch.einsum("bnhw,nd->bdhw", quantized, self.embeddings.weight)
+        return quantized, embeddings
 
 
 class VQVAELayer(nn.Module):
@@ -67,7 +88,6 @@ class VQVAELayer(nn.Module):
         super().__init__()
         self.conv1 = nn.Conv2d(config.input_dim, config.middle_dim, 1)
         self.conv2 = nn.Conv2d(config.middle_dim, config.middle_dim, 3, padding=1)
-        self.a = nn.Conv2d(config.middle_dim, config.middle_dim, 3, padding=1)
         self.conv3 = nn.Conv2d(config.middle_dim, config.output_dim, 1)
 
         self.shortcut = (
@@ -99,7 +119,7 @@ class VQVAEEncoder(nn.Module):
         super().__init__()
         self.stem = nn.Conv2d(config.num_channels, config.hidden_dims[0], 7, padding=3)
         self.layers = nn.Sequential(*map(VQVAELayer, config))
-        self.head = nn.Conv2d(config.hidden_dims[-1], config.embedding_dim, 1)
+        self.head = nn.Conv2d(config.hidden_dims[-1], config.num_embeddings, 1)
 
     def forward(self, images: torch.Tensor) -> torch.Tensor:
         hidden = self.stem(images)
@@ -115,51 +135,8 @@ class VQVAEDecoder(nn.Module):
         self.layers = nn.Sequential(*map(VQVAELayer, config))
         self.head = nn.Conv2d(config.hidden_dims[-1], config.num_channels, 1)
 
-    def forward(self, encodings: torch.Tensor) -> torch.Tensor:
-        hidden = self.stem(encodings)
+    def forward(self, embeddings: torch.Tensor) -> torch.Tensor:
+        hidden = self.stem(embeddings)
         hidden = self.layers(hidden)
         hidden = self.head(hidden.relu())
         return hidden
-
-
-class VQVAEQuantizer(nn.Module):
-    def __init__(self, config: VQVAEQuantizerConfig):
-        super().__init__()
-        self.config = config
-        self.embeddings = nn.Embedding(config.num_embeddings, config.embedding_dim)
-        self.embeddings.requires_grad_(False)
-
-    def forward(
-        self,
-        encodings: Optional[torch.Tensor] = None,
-        quantized_ids: Optional[torch.Tensor] = None,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
-        if quantized_ids is not None:
-            return quantized_ids, self.embeddings(quantized_ids).permute(0, 3, 1, 2)
-
-        batch_size, _, height, width = encodings.shape
-        encodings = encodings.permute(0, 2, 3, 1).flatten(0, 2)
-
-        encodings_norm = encodings.square().sum(1).unsqueeze(1)
-        embeddings_norm = self.embeddings.weight.square().sum(1).unsqueeze(0)
-        dot_product = torch.matmul(encodings, self.embeddings.weight.transpose(0, 1))
-
-        quantized_ids = (encodings_norm + embeddings_norm - 2 * dot_product).argmin(1)
-        quantized_encodings = (self.embeddings(quantized_ids) - encodings).detach()
-        quantized_encodings = quantized_encodings + encodings
-
-        if self.training:
-            num_selected = encodings.new_zeros(self.embeddings.num_embeddings)
-            num_selected.scatter_(0, quantized_ids, 1, reduce="add")
-
-            new_embeddings = torch.zeros_like(self.embeddings.weight)
-            new_embeddings.scatter_(0, quantized_ids[:, None], encodings, reduce="add")
-            new_embeddings = new_embeddings / (num_selected[:, None] + 1e-12)
-
-            self.embeddings.weight.mul_(self.config.ema_decay)
-            self.embeddings.weight.add_(new_embeddings, alpha=1 - self.config.ema_decay)
-
-        return (
-            quantized_ids.view(batch_size, height, width),
-            quantized_encodings.view(batch_size, height, width, -1).permute(0, 3, 1, 2),
-        )

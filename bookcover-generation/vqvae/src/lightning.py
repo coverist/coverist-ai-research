@@ -2,6 +2,8 @@ import os
 from typing import Any, Optional
 
 import torch
+import torch.nn.functional as F
+import wandb
 from omegaconf import DictConfig
 from pytorch_lightning import LightningDataModule, LightningModule
 from sklearn.model_selection import train_test_split
@@ -36,34 +38,40 @@ class VQVAETrainingModule(LightningModule):
         self.quantizer = VQVAEQuantizer(VQVAEQuantizerConfig(**config.model.quantizer))
 
     def forward(self, images: torch.Tensor) -> tuple[torch.Tensor, ...]:
-        encodings = self.encoder(images)
-        _, quantized_encodings = self.quantizer(encodings)
-        decodings = self.decoder(quantized_encodings)
+        logits = self.encoder(images)
+        quantized, embeddings = self.quantizer(logits)
+        decoded = self.decoder(embeddings)
 
-        loss_recon = (images - decodings).abs().mean()
-        loss_embed = (encodings - quantized_encodings.detach()).square().mean()
-        loss = loss_recon + loss_embed
-        return decodings, loss, loss_recon, loss_embed
+        log_probs = logits.permute(0, 2, 3, 1).flatten(0, 2).log_softmax(-1)
+        log_uniform = (torch.ones_like(log_probs) / logits.size(-1)).log()
+
+        loss_recon = (images - decoded).abs().mean()
+        loss_kld = F.kl_div(log_uniform, log_probs, reduce="batchmean", log_target=True)
+        loss = loss_recon + 1e-4 * loss_kld
+        return quantized, decoded, loss, loss_recon, loss_kld
 
     def training_step(self, images: torch.Tensor, batch_idx: int) -> torch.Tensor:
-        _, loss, loss_recon, loss_embed = self(images)
+        _, _, loss, loss, loss_recon, loss_kld = self(images)
         self.log("train/loss", loss)
         self.log("train/loss_recon", loss_recon)
-        self.log("train/loss_embed", loss_embed)
+        self.log("train/loss_kld", loss_kld)
         self.log("step", self.global_step)
         return loss
 
     def validation_step(
         self, images: torch.Tensor, batch_idx: int
-    ) -> tuple[torch.Tensor, torch.Tensor]:
-        decodings, loss, loss_recon, loss_embed = self(images)
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        quantized, decoded, loss, loss_recon, loss_kld = self(images)
         self.log("val/loss", loss)
         self.log("val/loss_recon", loss_recon)
-        self.log("val/loss_embed", loss_embed)
-        return images, decodings
+        self.log("val/loss_kld", loss_kld)
+        return images, quantized, decoded
 
     def validation_epoch_end(self, outputs: list[tuple[torch.Tensor, torch.Tensor]]):
-        images = torch.stack(outputs[0], dim=1).flatten(0, 1)
+        quantized = torch.cat([x[1] for x in outputs], dim=0)
+        self.log("val/quantized", wandb.Histogram(quantized))
+
+        images = torch.stack((outputs[0][0], outputs[0][2]), dim=1).flatten(0, 1)
         images = make_grid(images, int(images.size(0) ** 0.5), value_range=(-1, 1))
         self.logger.log_image("val/reconstruct", [images])
 

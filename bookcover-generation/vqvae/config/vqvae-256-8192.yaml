@@ -10,7 +10,7 @@ model:
     num_layers: [2, 2, 4, 4, 8]
     hidden_dims: [128, 256, 512, 1024, 2048]
     middle_reduction: 4
-    embedding_dim: 128
+    num_embeddings: 8192
   decoder:
     num_channels: 3
     num_layers: [8, 4, 4, 2, 2]
@@ -20,7 +20,6 @@ model:
   quantizer:
     num_embeddings: 8192
     embedding_dim: 128
-    ema_decay: 0.99
 
 optim:
   lr: 2e-4
