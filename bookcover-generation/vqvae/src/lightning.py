@@ -41,7 +41,7 @@ class VQVAETrainingModule(LightningModule):
         _, embeddings = self.quantizer(logits)
         decoded = self.decoder(embeddings)
 
-        logits = logits.permute(0, 2, 3, 1).flatten(0, 2)
+        logits = logits.float().permute(0, 2, 3, 1).flatten(0, 2)
         uniform = torch.ones_like(logits) / logits.size(-1)
 
         loss_recon = (images - decoded).abs().mean()
