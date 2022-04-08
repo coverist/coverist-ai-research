@@ -11,16 +11,15 @@ model:
     hidden_dims: [128, 256, 512, 1024, 2048]
     middle_reduction: 4
     num_embeddings: 8192
+    embedding_dim: 128
+    temperature: 1.0
   decoder:
     num_channels: 3
     num_layers: [4, 4, 2, 2, 2]
     hidden_dims: [2048, 1024, 512, 256, 128]
     middle_reduction: 4
-    embedding_dim: 128
-  quantizer:
     num_embeddings: 8192
     embedding_dim: 128
-    temperature: 1.0
 
 optim:
   optimizer:
@@ -31,11 +30,7 @@ optim:
   temperature:
     start: 1.0
     end: 0.05
-    num_decay_steps: 50000
-  kld_weight:
-    start: 0.0
-    end: 0.005
-    num_decay_steps: 5000
+    num_decay_steps: 100000
 
 train:
   name: vqvae-256-8192

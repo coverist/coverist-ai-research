@@ -3,7 +3,7 @@ import os
 from typing import Any, Optional
 
 import torch
-import torch.nn.functional as F
+import torch.nn as nn
 from omegaconf import DictConfig
 from pytorch_lightning import LightningDataModule, LightningModule
 from sklearn.model_selection import train_test_split
@@ -14,14 +14,7 @@ from torch.utils.data import DataLoader, Subset
 from torchvision.utils import make_grid
 
 from dataset import ImageDataset
-from modeling import (
-    VQVAEDecoder,
-    VQVAEDecoderConfig,
-    VQVAEEncoder,
-    VQVAEEncoderConfig,
-    VQVAEQuantizer,
-    VQVAEQuantizerConfig,
-)
+from modeling import VQVAEDecoder, VQVAEDecoderConfig, VQVAEEncoder, VQVAEEncoderConfig
 
 try:
     from apex.optimizers import FusedAdam as Adam
@@ -29,64 +22,37 @@ except ModuleNotFoundError:
     from torch.optim import Adam
 
 
-class CosineDecay:
-    def __init__(self, start: float, end: float, num_decay_steps: int):
-        self.start = start
-        self.end = end
-        self.num_decay_steps = num_decay_steps
-
-    def __call__(self, step: int) -> float:
-        ratio = 0.5 * (math.cos(math.pi * min(step / self.num_decay_steps, 1.0)) + 1)
-        return self.end + (self.start - self.end) * ratio
-
-
 class VQVAETrainingModule(LightningModule):
     def __init__(self, config: DictConfig):
         super().__init__()
         self.config = config
-        self.temperature_decay = CosineDecay(**config.optim.temperature)
-        self.kld_weight_decay = CosineDecay(**config.optim.kld_weight)
-        self.loss_kld_weight = 0.0
+        self.temperature_start = config.optim.temperature.start
+        self.temperature_end = config.optim.temperature.end
+        self.temperature_decay_steps = config.optim.temperature.num_decay_steps
 
         self.encoder = VQVAEEncoder(VQVAEEncoderConfig(**config.model.encoder))
         self.decoder = VQVAEDecoder(VQVAEDecoderConfig(**config.model.decoder))
-        self.quantizer = VQVAEQuantizer(VQVAEQuantizerConfig(**config.model.quantizer))
+        self.criterion = nn.SmoothL1Loss()
 
-    def forward(self, images: torch.Tensor) -> tuple[torch.Tensor, ...]:
-        logits = self.encoder(images)
-        decoded = self.decoder(self.quantizer(logits)[1])
-
-        log_probs = logits.float().permute(0, 2, 3, 1).flatten(0, 2).log_softmax(-1)
-        uniform = (torch.ones_like(log_probs) / log_probs.size(-1)).log()
-
-        loss_recon = (images - decoded).abs().mean()
-        loss_kld = F.kl_div(uniform, log_probs, reduction="batchmean", log_target=True)
-
-        loss = loss_recon + self.loss_kld_weight * loss_kld
-        return decoded, loss, loss_recon, loss_kld
+    def forward(self, images: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        reconstructed = self.decoder(self.encoder(images))
+        loss = self.criterion(images, reconstructed)
+        return reconstructed, loss
 
     def training_step(self, images: torch.Tensor, batch_idx: int) -> torch.Tensor:
-        _, loss, loss_recon, loss_kld = self(images)
+        _, loss = self(images)
         self.log("train/loss", loss)
-        self.log("train/loss_recon", loss_recon)
-        self.log("train/loss_kld", loss_kld)
-        self.log("train/temperature", self.quantizer.temperature)
+        self.log("train/temperature", self.encoder.temperature)
         self.log("step", self.global_step)
         return loss
-
-    def on_before_zero_grad(self, optimizer: Optimizer):
-        self.quantizer.temperature = self.temperature_decay(self.global_step)
-        self.loss_kld_weight = self.kld_weight_decay(self.global_step)
 
     def validation_step(
         self, images: torch.Tensor, batch_idx: int
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        decoded, loss, loss_recon, loss_kld = self(images)
+        reconstructed, loss = self(images)
         self.log("val/loss", loss)
-        self.log("val/loss_recon", loss_recon)
-        self.log("val/loss_kld", loss_kld)
         self.log("step", self.global_step)
-        return images, decoded
+        return images, reconstructed
 
     def validation_epoch_end(self, outputs: list[tuple[torch.Tensor, torch.Tensor]]):
         images = torch.stack(outputs[0], dim=1).flatten(0, 1)
@@ -95,12 +61,20 @@ class VQVAETrainingModule(LightningModule):
             nrow=int(images.size(0) ** 0.5) // 2 * 2,
             value_range=(-1, 1),
         )
-        self.logger.log_image("val/reconstruct", [images])
+        self.logger.log_image("val/reconstructed", [images])
 
     def configure_optimizers(self) -> tuple[list[Optimizer], list[LRScheduler]]:
         optimizer = Adam(self.parameters(), **self.config.optim.optimizer)
         scheduler = CosineAnnealingLR(optimizer, self.config.train.epochs)
         return [optimizer], [scheduler]
+
+    def on_before_zero_grad(self, optimizer: Optimizer):
+        ratio = min(self.global_step / self.temperature_decay_steps, 1.0)
+        ratio = 0.5 * (math.cos(math.pi * ratio) + 1)
+        self.encoder.temperature = (
+            self.temperature_end
+            + (self.temperature_start - self.temperature_end) * ratio
+        )
 
     def on_load_checkpoint(self, checkpoint: dict[str, Any]):
         if "ApexMixedPrecisionPlugin" in checkpoint:

@@ -8,13 +8,6 @@ import torch.nn.functional as F
 
 
 @dataclass
-class VQVAEQuantizerConfig:
-    num_embeddings: int = 8192
-    embedding_dim: int = 128
-    temperature: float = 1.0
-
-
-@dataclass
 class VQVAELayerConfig:
     input_dim: int
     middle_dim: int
@@ -30,6 +23,8 @@ class VQVAEEncoderConfig:
     hidden_dims: tuple[int] = (128, 256, 512, 1024, 2048)
     middle_reduction: int = 4
     num_embeddings: int = 8192
+    embedding_dim: int = 128
+    temperature: float = 1.0
 
     def __iter__(self) -> Generator[VQVAELayerConfig]:
         for i, num_layers in enumerate(self.num_layers):
@@ -49,6 +44,7 @@ class VQVAEDecoderConfig:
     num_layers: tuple[int] = (8, 4, 4, 2, 2)
     hidden_dims: tuple[int] = (2048, 1024, 512, 256, 128)
     middle_reduction: int = 4
+    num_embeddings: int = 8192
     embedding_dim: int = 128
 
     def __iter__(self) -> Generator[VQVAELayerConfig]:
@@ -61,28 +57,6 @@ class VQVAEDecoderConfig:
                     self.hidden_dims[i + 1 if handover else i],
                     upsampling=2 if handover else None,
                 )
-
-
-class VQVAEQuantizer(nn.Module):
-    def __init__(self, config: VQVAEQuantizerConfig):
-        super().__init__()
-        self.config = config
-        self.temperature = config.temperature
-        self.embeddings = nn.Embedding(config.num_embeddings, config.embedding_dim)
-
-    def forward(
-        self,
-        logits: Optional[torch.Tensor] = None,
-        quantized: Optional[torch.Tensor] = None,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
-        if quantized is None and not self.training:
-            quantized = logits.argmax(dim=1)
-        if quantized is not None:
-            return quantized, self.embeddings(quantized).permute(0, 3, 1, 2)
-
-        quantized = F.gumbel_softmax(logits, tau=self.temperature, dim=1)
-        embeddings = torch.einsum("bnhw,nd->bdhw", quantized, self.embeddings.weight)
-        return quantized, embeddings
 
 
 class VQVAELayer(nn.Module):
@@ -119,26 +93,35 @@ class VQVAELayer(nn.Module):
 class VQVAEEncoder(nn.Module):
     def __init__(self, config: VQVAEEncoderConfig):
         super().__init__()
+        self.temperature = config.temperature
+
         self.stem = nn.Conv2d(config.num_channels, config.hidden_dims[0], 7, padding=3)
         self.layers = nn.Sequential(*map(VQVAELayer, config))
-        self.head = nn.Conv2d(config.hidden_dims[-1], config.num_embeddings, 1)
+        self.head = nn.Conv2d(config.hidden_dims[-1], config.embedding_dim, 1)
+        self.embeddings = nn.Conv2d(config.embedding_dim, config.num_embeddings, 1)
 
     def forward(self, images: torch.Tensor) -> torch.Tensor:
         hidden = self.stem(images)
         hidden = self.layers(hidden)
         hidden = self.head(hidden.relu())
-        return hidden
+        logits = self.embeddings(hidden.relu())
+
+        if self.training:
+            return F.gumbel_softmax(logits, self.temperature, dim=1)
+        return torch.zeros_like(logits).scatter_(1, logits.argmax(1, keepdim=True), 1)
 
 
 class VQVAEDecoder(nn.Module):
     def __init__(self, config: VQVAEDecoderConfig):
         super().__init__()
+        self.embeddings = nn.Conv2d(config.num_embeddings, config.embedding_dim, 1)
         self.stem = nn.Conv2d(config.embedding_dim, config.hidden_dims[0], 1)
         self.layers = nn.Sequential(*map(VQVAELayer, config))
         self.head = nn.Conv2d(config.hidden_dims[-1], config.num_channels, 1)
 
-    def forward(self, embeddings: torch.Tensor) -> torch.Tensor:
-        hidden = self.stem(embeddings)
+    def forward(self, encodings: torch.Tensor) -> torch.Tensor:
+        hidden = self.embeddings(encodings)
+        hidden = self.stem(hidden.relu())
         hidden = self.layers(hidden)
         hidden = self.head(hidden.relu())
         return hidden
