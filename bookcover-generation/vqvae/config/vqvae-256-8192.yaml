@@ -25,9 +25,10 @@ model:
   loss_kld_weight: 0.01
 
 optim:
-  lr: 2e-4
+  lr: 3e-4
   betas: [0.9, 0.999]
   eps: 1e-6
+  weight_decay: 1e-4
 
 train:
   name: vqvae-256-8192
