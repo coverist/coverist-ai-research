@@ -32,6 +32,8 @@ class VQVAETrainingModule(LightningModule):
     def __init__(self, config: DictConfig):
         super().__init__()
         self.config = config
+        self.loss_kld_weight = config.model.loss_kld_weight
+
         self.encoder = VQVAEEncoder(VQVAEEncoderConfig(**config.model.encoder))
         self.decoder = VQVAEDecoder(VQVAEDecoderConfig(**config.model.decoder))
         self.quantizer = VQVAEQuantizer(VQVAEQuantizerConfig(**config.model.quantizer))
@@ -52,7 +54,7 @@ class VQVAETrainingModule(LightningModule):
             log_target=True,
         )
 
-        loss = loss_recon + 1e-3 * loss_kld
+        loss = loss_recon + self.loss_kld_weight * loss_kld
         return decoded, loss, loss_recon, loss_kld
 
     def training_step(self, images: torch.Tensor, batch_idx: int) -> torch.Tensor:
@@ -60,8 +62,14 @@ class VQVAETrainingModule(LightningModule):
         self.log("train/loss", loss)
         self.log("train/loss_recon", loss_recon)
         self.log("train/loss_kld", loss_kld)
+        self.log("train/temperature", self.quantizer.temperature)
         self.log("step", self.global_step)
         return loss
+
+    def on_after_backward(self):
+        self.quantizer.update(
+            self.global_step / self.trainer.estimated_stepping_batches
+        )
 
     def validation_step(
         self, images: torch.Tensor, batch_idx: int

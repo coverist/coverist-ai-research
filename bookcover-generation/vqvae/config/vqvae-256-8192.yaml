@@ -7,19 +7,22 @@ dataset:
 model:
   encoder:
     num_channels: 3
-    num_layers: [2, 2, 4, 4, 8]
+    num_layers: [2, 2, 2, 4, 4]
     hidden_dims: [128, 256, 512, 1024, 2048]
     middle_reduction: 4
     num_embeddings: 8192
   decoder:
     num_channels: 3
-    num_layers: [8, 4, 4, 2, 2]
+    num_layers: [4, 4, 2, 2, 2]
     hidden_dims: [2048, 1024, 512, 256, 128]
     middle_reduction: 4
     embedding_dim: 128
   quantizer:
     num_embeddings: 8192
     embedding_dim: 128
+    max_temperature: 1.0
+    min_temperature: 0.05
+  loss_kld_weight: 0.01
 
 optim:
   lr: 2e-4

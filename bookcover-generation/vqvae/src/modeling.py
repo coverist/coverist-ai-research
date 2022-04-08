@@ -1,3 +1,4 @@
+import math
 from collections.abc import Generator
 from dataclasses import dataclass
 from typing import Optional
@@ -11,6 +12,8 @@ import torch.nn.functional as F
 class VQVAEQuantizerConfig:
     num_embeddings: int = 8192
     embedding_dim: int = 128
+    max_temperature: float = 1.0
+    min_temperature: float = 0.05
 
 
 @dataclass
@@ -66,7 +69,16 @@ class VQVAEQuantizer(nn.Module):
     def __init__(self, config: VQVAEQuantizerConfig):
         super().__init__()
         self.config = config
+        self.temperature = config.max_temperature
         self.embeddings = nn.Embedding(config.num_embeddings, config.embedding_dim)
+
+    def update(self, ratio: float = 0.0):
+        cosine_annealing = 0.5 * (math.cos(math.pi * ratio) + 1)
+        self.temperature = (
+            self.config.min_temperature
+            + (self.config.max_temperature - self.config.min_temperature)
+            * cosine_annealing
+        )
 
     def forward(
         self,
@@ -78,7 +90,7 @@ class VQVAEQuantizer(nn.Module):
         if quantized is not None:
             return quantized, self.embeddings(quantized).permute(0, 3, 1, 2)
 
-        quantized = F.gumbel_softmax(logits, tau=0.5, dim=1)
+        quantized = F.gumbel_softmax(logits, tau=self.temperature, dim=1)
         embeddings = torch.einsum("bnhw,nd->bdhw", quantized, self.embeddings.weight)
         return quantized, embeddings
 
