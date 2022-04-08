@@ -103,7 +103,7 @@ class VQVAELayer(nn.Module):
             else nn.Identity()
         )
         self.upsample = (
-            nn.Upsample(None, config.upsampling)
+            nn.Upsample(scale_factor=config.upsampling, mode="nearest")
             if config.upsampling is not None
             else nn.Identity()
         )

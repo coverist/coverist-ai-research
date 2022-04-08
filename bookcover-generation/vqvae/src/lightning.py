@@ -29,35 +29,38 @@ except ModuleNotFoundError:
     from torch.optim import Adam
 
 
+class CosineDecay:
+    def __init__(self, start: float, end: float, num_decay_steps: int):
+        self.start = start
+        self.end = end
+        self.num_decay_steps = num_decay_steps
+
+    def __call__(self, step: int) -> float:
+        ratio = 0.5 * (math.cos(math.pi * min(step / self.num_decay_steps, 1.0)) + 1)
+        return self.end + (self.start - self.end) * ratio
+
+
 class VQVAETrainingModule(LightningModule):
     def __init__(self, config: DictConfig):
         super().__init__()
         self.config = config
-        self.max_temperature = config.model.decay.max_temperature
-        self.min_temperature = config.model.decay.min_temperature
-        self.max_kld_weight = config.model.decay.max_kld_weight
-        self.kld_warmup_steps = config.model.decay.kld_warmup_steps
+        self.temperature_decay = CosineDecay(**config.optim.temperature)
+        self.kld_weight_decay = CosineDecay(**config.optim.kld_weight)
+        self.loss_kld_weight = 0.0
 
         self.encoder = VQVAEEncoder(VQVAEEncoderConfig(**config.model.encoder))
         self.decoder = VQVAEDecoder(VQVAEDecoderConfig(**config.model.decoder))
         self.quantizer = VQVAEQuantizer(VQVAEQuantizerConfig(**config.model.quantizer))
 
-        self.loss_kld_weight = 0.0
-
     def forward(self, images: torch.Tensor) -> tuple[torch.Tensor, ...]:
         logits = self.encoder(images)
         decoded = self.decoder(self.quantizer(logits)[1])
 
-        logits = logits.float().permute(0, 2, 3, 1).flatten(0, 2)
-        uniform = torch.ones_like(logits) / logits.size(-1)
+        log_probs = logits.float().permute(0, 2, 3, 1).flatten(0, 2).log_softmax(-1)
+        uniform = (torch.ones_like(log_probs) / log_probs.size(-1)).log()
 
         loss_recon = (images - decoded).abs().mean()
-        loss_kld = F.kl_div(
-            uniform.log(),
-            logits.log_softmax(-1),
-            reduction="batchmean",
-            log_target=True,
-        )
+        loss_kld = F.kl_div(uniform, log_probs, reduction="batchmean", log_target=True)
 
         loss = loss_recon + self.loss_kld_weight * loss_kld
         return decoded, loss, loss_recon, loss_kld
@@ -71,16 +74,9 @@ class VQVAETrainingModule(LightningModule):
         self.log("step", self.global_step)
         return loss
 
-    def on_after_backward(self):
-        ratio = self.global_step / self.trainer.estimated_stepping_batches
-        ratio = 0.5 * (math.cos(math.pi * ratio) + 1)
-        self.quantizer.temperature = (
-            self.min_temperature + (self.max_temperature - self.min_temperature) * ratio
-        )
-
-        ratio = min(self.global_step / self.kld_warmup_steps, 1.0)
-        ratio = 0.5 * (math.cos(math.pi * ratio) + 1)
-        self.loss_kld_weight = (1 - ratio) * self.max_kld_weight
+    def on_before_zero_grad(self, optimizer: Optimizer):
+        self.quantizer.temperature = self.temperature_decay(self.global_step)
+        self.loss_kld_weight = self.kld_weight_decay(self.global_step)
 
     def validation_step(
         self, images: torch.Tensor, batch_idx: int
@@ -102,7 +98,7 @@ class VQVAETrainingModule(LightningModule):
         self.logger.log_image("val/reconstruct", [images])
 
     def configure_optimizers(self) -> tuple[list[Optimizer], list[LRScheduler]]:
-        optimizer = Adam(self.parameters(), **self.config.optim)
+        optimizer = Adam(self.parameters(), **self.config.optim.optimizer)
         scheduler = CosineAnnealingLR(optimizer, self.config.train.epochs)
         return [optimizer], [scheduler]
 

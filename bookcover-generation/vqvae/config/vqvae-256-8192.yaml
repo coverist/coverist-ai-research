@@ -21,17 +21,21 @@ model:
     num_embeddings: 8192
     embedding_dim: 128
     temperature: 1.0
-  decay:
-    max_temperature: 1.0
-    min_temperature: 0.05
-    max_kld_weight: 0.01
-    kld_warmup_steps: 5000
 
 optim:
-  lr: 3e-4
-  betas: [0.9, 0.999]
-  eps: 1e-6
-  weight_decay: 1e-4
+  optimizer:
+    lr: 3e-4
+    betas: [0.9, 0.999]
+    eps: 1e-6
+    weight_decay: 1e-4
+  temperature:
+    start: 1.0
+    end: 0.05
+    num_decay_steps: 50000
+  kld_weight:
+    start: 0.0
+    end: 0.005
+    num_decay_steps: 5000
 
 train:
   name: vqvae-256-8192
