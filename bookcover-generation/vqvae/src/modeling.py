@@ -1,4 +1,3 @@
-import math
 from collections.abc import Generator
 from dataclasses import dataclass
 from typing import Optional
@@ -12,8 +11,7 @@ import torch.nn.functional as F
 class VQVAEQuantizerConfig:
     num_embeddings: int = 8192
     embedding_dim: int = 128
-    max_temperature: float = 1.0
-    min_temperature: float = 0.05
+    temperature: float = 1.0
 
 
 @dataclass
@@ -69,16 +67,8 @@ class VQVAEQuantizer(nn.Module):
     def __init__(self, config: VQVAEQuantizerConfig):
         super().__init__()
         self.config = config
-        self.temperature = config.max_temperature
+        self.temperature = config.temperature
         self.embeddings = nn.Embedding(config.num_embeddings, config.embedding_dim)
-
-    def update(self, ratio: float = 0.0):
-        cosine_annealing = 0.5 * (math.cos(math.pi * ratio) + 1)
-        self.temperature = (
-            self.config.min_temperature
-            + (self.config.max_temperature - self.config.min_temperature)
-            * cosine_annealing
-        )
 
     def forward(
         self,

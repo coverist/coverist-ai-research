@@ -1,3 +1,4 @@
+import math
 import os
 from typing import Any, Optional
 
@@ -32,16 +33,20 @@ class VQVAETrainingModule(LightningModule):
     def __init__(self, config: DictConfig):
         super().__init__()
         self.config = config
-        self.loss_kld_weight = config.model.loss_kld_weight
+        self.max_temperature = config.model.decay.max_temperature
+        self.min_temperature = config.model.decay.min_temperature
+        self.max_kld_weight = config.model.decay.max_kld_weight
+        self.kld_warmup_steps = config.model.decay.kld_warmup_steps
 
         self.encoder = VQVAEEncoder(VQVAEEncoderConfig(**config.model.encoder))
         self.decoder = VQVAEDecoder(VQVAEDecoderConfig(**config.model.decoder))
         self.quantizer = VQVAEQuantizer(VQVAEQuantizerConfig(**config.model.quantizer))
 
+        self.loss_kld_weight = 0.0
+
     def forward(self, images: torch.Tensor) -> tuple[torch.Tensor, ...]:
         logits = self.encoder(images)
-        _, embeddings = self.quantizer(logits)
-        decoded = self.decoder(embeddings)
+        decoded = self.decoder(self.quantizer(logits)[1])
 
         logits = logits.float().permute(0, 2, 3, 1).flatten(0, 2)
         uniform = torch.ones_like(logits) / logits.size(-1)
@@ -67,9 +72,15 @@ class VQVAETrainingModule(LightningModule):
         return loss
 
     def on_after_backward(self):
-        self.quantizer.update(
-            self.global_step / self.trainer.estimated_stepping_batches
+        ratio = self.global_step / self.trainer.estimated_stepping_batches
+        ratio = 0.5 * (math.cos(math.pi * ratio) + 1)
+        self.quantizer.temperature = (
+            self.min_temperature + (self.max_temperature - self.min_temperature) * ratio
         )
+
+        ratio = min(self.global_step / self.kld_warmup_steps, 1.0)
+        ratio = 0.5 * (math.cos(math.pi * ratio) + 1)
+        self.loss_kld_weight = ratio * self.max_kld_weight
 
     def validation_step(
         self, images: torch.Tensor, batch_idx: int

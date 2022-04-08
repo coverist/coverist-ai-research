@@ -20,9 +20,12 @@ model:
   quantizer:
     num_embeddings: 8192
     embedding_dim: 128
+    temperature: 1.0
+  decay:
     max_temperature: 1.0
     min_temperature: 0.05
-  loss_kld_weight: 0.01
+    max_kld_weight: 0.01
+    kld_warmup_steps: 5000
 
 optim:
   lr: 3e-4
