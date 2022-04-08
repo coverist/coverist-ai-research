@@ -80,7 +80,7 @@ class VQVAETrainingModule(LightningModule):
 
         ratio = min(self.global_step / self.kld_warmup_steps, 1.0)
         ratio = 0.5 * (math.cos(math.pi * ratio) + 1)
-        self.loss_kld_weight = ratio * self.max_kld_weight
+        self.loss_kld_weight = (1 - ratio) * self.max_kld_weight
 
     def validation_step(
         self, images: torch.Tensor, batch_idx: int
