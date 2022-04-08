@@ -11,6 +11,7 @@ model:
     hidden_dims: [128, 256, 512, 1024, 2048]
     middle_reduction: 4
     num_embeddings: 8192
+    embedding_dim: 128
     temperature: 1.0
   decoder:
     num_channels: 3
@@ -18,6 +19,7 @@ model:
     hidden_dims: [2048, 1024, 512, 256, 128]
     middle_reduction: 4
     num_embeddings: 8192
+    embedding_dim: 128
 
 optim:
   optimizer:
