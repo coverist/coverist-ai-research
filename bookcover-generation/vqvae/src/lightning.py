@@ -32,7 +32,7 @@ class VQVAETrainingModule(LightningModule):
 
         self.encoder = VQVAEEncoder(VQVAEEncoderConfig(**config.model.encoder))
         self.decoder = VQVAEDecoder(VQVAEDecoderConfig(**config.model.decoder))
-        self.criterion = nn.SmoothL1Loss()
+        self.criterion = nn.L1Loss()
 
     def forward(self, images: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         reconstructed = self.decoder(self.encoder(images))
