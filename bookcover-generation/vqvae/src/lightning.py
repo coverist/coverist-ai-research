@@ -37,16 +37,27 @@ class VQVAETrainingModule(LightningModule):
         self.ocr = easyocr.Reader(["ko"]).detector.module.basenet
         self.ocr.requires_grad_(False)
 
-    def forward(self, images: torch.Tensor) -> tuple[torch.Tensor, ...]:
+        self.register_buffer("ocr_shift", torch.tensor([0.485, 0.456, 0.406]))
+        self.register_buffer("ocr_scale", torch.tensor([0.229, 0.224, 0.225]))
+
+    def ocr_loss(self, images: torch.Tensor, recon: torch.Tensor) -> torch.Tensor:
+        images = (images + 1) / 2
+        images = images - self.ocr_shift[None, :, None, None]
+        images = images / self.ocr_scale[None, :, None, None]
+
+        recon = (recon + 1) / 2
+        recon = recon - self.ocr_shift[None, :, None, None]
+        recon = recon / self.ocr_scale[None, :, None, None]
+
         self.ocr.eval()
-
-        recon = self.decoder(self.encoder(images))
         ocr_images, ocr_recon = self.ocr(images), self.ocr(recon)
+        return sum(map(F.mse_loss, ocr_images, ocr_recon)) / len(ocr_recon)
 
+    def forward(self, images: torch.Tensor) -> tuple[torch.Tensor, ...]:
+        recon = self.decoder(self.encoder(images))
         loss_recon = F.l1_loss(images, recon)
-        loss_ocr = sum(map(F.mse_loss, ocr_images, ocr_recon)) / len(ocr_recon)
+        loss_ocr = self.ocr_loss(images, recon)
         loss = loss_recon + loss_ocr
-
         return recon, loss, loss_recon, loss_ocr
 
     def training_step(self, images: torch.Tensor, batch_idx: int) -> torch.Tensor:
