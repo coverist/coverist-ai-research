@@ -38,17 +38,16 @@ class VQVAETrainingModule(LightningModule):
         self.ocr.requires_grad_(False)
 
     def forward(self, images: torch.Tensor) -> tuple[torch.Tensor, ...]:
-        recon = self.decoder(self.encoder(images))
-        loss_recon = F.l1_loss(images, recon)
-
         self.ocr.eval()
-        loss_ocr_list = [
-            F.mse_loss(ocr_images, ocr_recon)
-            for ocr_images, ocr_recon in zip(self.ocr(images), self.ocr(recon))
-        ]
-        loss_ocr = sum(loss_ocr_list) / len(loss_ocr_list)
 
+        recon = self.decoder(self.encoder(images))
+        ocr_images = self.ocr(F.avg_pool2d(images, 2))
+        ocr_recon = self.ocr(F.avg_pool2d(recon, 2))
+
+        loss_recon = F.l1_loss(images, recon)
+        loss_ocr = sum(map(F.mse_loss, ocr_images, ocr_recon)) / len(ocr_recon)
         loss = loss_recon + loss_ocr
+
         return recon, loss, loss_recon, loss_ocr
 
     def training_step(self, images: torch.Tensor, batch_idx: int) -> torch.Tensor:
