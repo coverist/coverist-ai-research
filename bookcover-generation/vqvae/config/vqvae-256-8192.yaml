@@ -7,7 +7,7 @@ dataset:
 model:
   encoder:
     num_channels: 3
-    num_layers: [2, 2, 4, 4, 8]
+    num_layers: [1, 1, 4, 8, 8]
     hidden_dims: [128, 256, 512, 1024, 2048]
     middle_reduction: 4
     num_embeddings: 8192
@@ -15,7 +15,7 @@ model:
     temperature: 1.0
   decoder:
     num_channels: 3
-    num_layers: [8, 4, 4, 2, 2]
+    num_layers: [8, 8, 4, 1, 1]
     hidden_dims: [2048, 1024, 512, 256, 128]
     middle_reduction: 4
     num_embeddings: 8192
