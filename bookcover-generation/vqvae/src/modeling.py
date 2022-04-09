@@ -66,6 +66,10 @@ class VQVAELayer(nn.Module):
         self.conv2 = nn.Conv2d(config.middle_dim, config.middle_dim, 3, padding=1)
         self.conv3 = nn.Conv2d(config.middle_dim, config.output_dim, 1)
 
+        self.norm1 = nn.GroupNorm(32, config.input_dim)
+        self.norm2 = nn.GroupNorm(32, config.middle_dim)
+        self.norm3 = nn.GroupNorm(32, config.middle_dim)
+
         self.shortcut = (
             nn.Conv2d(config.input_dim, config.output_dim, 1)
             if config.input_dim != config.output_dim
@@ -83,10 +87,15 @@ class VQVAELayer(nn.Module):
         )
 
     def forward(self, hidden: torch.Tensor) -> torch.Tensor:
+        # shortcut = self.upsample(self.shortcut(self.pool(hidden)))
+        # hidden = self.conv1(hidden.relu())
+        # hidden = self.conv2(self.upsample(hidden.relu()))
+        # hidden = self.conv3(self.pool(hidden.relu()))
+        # return hidden + shortcut
         shortcut = self.upsample(self.shortcut(self.pool(hidden)))
-        hidden = self.conv1(hidden.relu())
-        hidden = self.conv2(self.upsample(hidden.relu()))
-        hidden = self.conv3(self.pool(hidden.relu()))
+        hidden = self.conv1(self.norm1(hidden).relu())
+        hidden = self.conv2(self.upsample(self.norm2(hidden).relu()))
+        hidden = self.conv3(self.pool(self.norm3(hidden).relu()))
         return hidden + shortcut
 
 
@@ -95,6 +104,7 @@ class VQVAEEncoder(nn.Module):
         super().__init__()
         self.stem = nn.Conv2d(config.num_channels, config.hidden_dims[0], 7, padding=3)
         self.layers = nn.Sequential(*map(VQVAELayer, config))
+        self.norm = nn.GroupNorm(32, config.hidden_dims[-1])
         self.head = nn.Conv2d(config.hidden_dims[-1], config.embedding_dim, 1)
 
         self.embeddings = nn.Conv2d(config.embedding_dim, config.num_embeddings, 1)
@@ -103,7 +113,7 @@ class VQVAEEncoder(nn.Module):
     def forward(self, images: torch.Tensor) -> torch.Tensor:
         hidden = self.stem(images)
         hidden = self.layers(hidden)
-        hidden = self.head(hidden.relu())
+        hidden = self.head(self.norm(hidden).relu())
         logits = self.embeddings(hidden.relu())
 
         if self.training:
@@ -119,11 +129,12 @@ class VQVAEDecoder(nn.Module):
 
         self.stem = nn.Conv2d(config.embedding_dim, config.hidden_dims[0], 1)
         self.layers = nn.Sequential(*map(VQVAELayer, config))
+        self.norm = nn.GroupNorm(32, config.hidden_dims[-1])
         self.head = nn.Conv2d(config.hidden_dims[-1], config.num_channels, 1)
 
     def forward(self, encodings: torch.Tensor) -> torch.Tensor:
         hidden = self.embeddings(encodings)
         hidden = self.stem(hidden.relu())
         hidden = self.layers(hidden)
-        hidden = self.head(hidden.relu())
+        hidden = self.head(self.norm(hidden).relu())
         return hidden.tanh()
