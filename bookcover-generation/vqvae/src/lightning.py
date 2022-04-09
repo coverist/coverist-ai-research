@@ -41,8 +41,7 @@ class VQVAETrainingModule(LightningModule):
         self.ocr.eval()
 
         recon = self.decoder(self.encoder(images))
-        ocr_images = self.ocr(F.avg_pool2d(images, 2))
-        ocr_recon = self.ocr(F.avg_pool2d(recon, 2))
+        ocr_images, ocr_recon = self.ocr(images), self.ocr(recon)
 
         loss_recon = F.l1_loss(images, recon)
         loss_ocr = sum(map(F.mse_loss, ocr_images, ocr_recon)) / len(ocr_recon)
