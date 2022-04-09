@@ -2,7 +2,6 @@ import math
 import os
 from typing import Any, Optional
 
-import easyocr
 import torch
 import torch.nn.functional as F
 from omegaconf import DictConfig
@@ -15,7 +14,13 @@ from torch.utils.data import DataLoader, Subset
 from torchvision.utils import make_grid
 
 from dataset import ImageDataset
-from modeling import VQVAEDecoder, VQVAEDecoderConfig, VQVAEEncoder, VQVAEEncoderConfig
+from modeling import (
+    LPIPS,
+    VQVAEDecoder,
+    VQVAEDecoderConfig,
+    VQVAEEncoder,
+    VQVAEEncoderConfig,
+)
 
 try:
     from apex.optimizers import FusedAdam as Adam
@@ -31,32 +36,15 @@ class VQVAETrainingModule(LightningModule):
         self.temperature_end = config.optim.temperature.end
         self.temperature_decay_steps = config.optim.temperature.num_decay_steps
 
+        self.ocr = LPIPS()
         self.encoder = VQVAEEncoder(VQVAEEncoderConfig(**config.model.encoder))
         self.decoder = VQVAEDecoder(VQVAEDecoderConfig(**config.model.decoder))
-
-        self.ocr = easyocr.Reader(["ko"]).detector.module.basenet
-        self.ocr.requires_grad_(False)
-
-        self.register_buffer("ocr_shift", torch.tensor([0.485, 0.456, 0.406]))
-        self.register_buffer("ocr_scale", torch.tensor([0.229, 0.224, 0.225]))
-
-    def ocr_loss(self, images: torch.Tensor, recon: torch.Tensor) -> torch.Tensor:
-        images = (images + 1) / 2
-        images = images - self.ocr_shift[None, :, None, None]
-        images = images / self.ocr_scale[None, :, None, None]
-
-        recon = (recon + 1) / 2
-        recon = recon - self.ocr_shift[None, :, None, None]
-        recon = recon / self.ocr_scale[None, :, None, None]
-
-        self.ocr.eval()
-        ocr_images, ocr_recon = self.ocr(images), self.ocr(recon)
-        return sum(map(F.mse_loss, ocr_images, ocr_recon)) / len(ocr_recon)
 
     def forward(self, images: torch.Tensor) -> tuple[torch.Tensor, ...]:
         recon = self.decoder(self.encoder(images))
         loss_recon = F.l1_loss(images, recon)
-        loss_ocr = self.ocr_loss(images, recon)
+        loss_ocr = self.ocr(images, recon)
+
         loss = loss_recon + loss_ocr
         return recon, loss, loss_recon, loss_ocr
 
