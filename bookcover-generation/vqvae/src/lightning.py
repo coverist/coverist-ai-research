@@ -7,6 +7,7 @@ import torch.nn as nn
 from omegaconf import DictConfig
 from pytorch_lightning import LightningDataModule, LightningModule
 from sklearn.model_selection import train_test_split
+from timm.optim import Lookahead
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.optim.lr_scheduler import _LRScheduler as LRScheduler
@@ -64,7 +65,8 @@ class VQVAETrainingModule(LightningModule):
         self.logger.log_image("val/reconstructed", [images])
 
     def configure_optimizers(self) -> tuple[list[Optimizer], list[LRScheduler]]:
-        optimizer = Adam(self.parameters(), **self.config.optim.optimizer)
+        optimizer = Adam(self.parameters(), **self.config.optim.optimizer.adam)
+        optimizer = Lookahead(optimizer, **self.config.optim.optimizer.lookahead)
         scheduler = CosineAnnealingLR(optimizer, self.config.train.epochs)
         return [optimizer], [scheduler]
 
