@@ -23,7 +23,7 @@ class LPIPS(nn.Module):
         images = images / self.scale[None, :, None, None]
 
         features = self.model.eval()(images)
-        features = [F.normalize(feature) for feature in features]
+        features = [F.normalize(feature, dim=1, eps=1e-6) for feature in features]
         return features
 
     def forward(self, images: torch.Tensor, recon: torch.Tensor) -> torch.Tensor:
