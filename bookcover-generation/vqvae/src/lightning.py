@@ -2,6 +2,7 @@ import math
 import os
 from typing import Any, Optional
 
+import easyocr
 import torch
 import torch.nn.functional as F
 from omegaconf import DictConfig
@@ -14,13 +15,7 @@ from torch.utils.data import DataLoader, Subset
 from torchvision.utils import make_grid
 
 from dataset import ImageDataset
-from modeling import (
-    LPIPS,
-    VQVAEDecoder,
-    VQVAEDecoderConfig,
-    VQVAEEncoder,
-    VQVAEEncoderConfig,
-)
+from modeling import VQVAEDecoder, VQVAEDecoderConfig, VQVAEEncoder, VQVAEEncoderConfig
 
 try:
     from apex.optimizers import FusedAdam as Adam
@@ -36,14 +31,30 @@ class VQVAETrainingModule(LightningModule):
         self.temperature_end = config.optim.temperature.end
         self.temperature_decay_steps = config.optim.temperature.num_decay_steps
 
-        self.ocr = LPIPS()
         self.encoder = VQVAEEncoder(VQVAEEncoderConfig(**config.model.encoder))
         self.decoder = VQVAEDecoder(VQVAEDecoderConfig(**config.model.decoder))
+
+        self.ocr = easyocr.Reader(["ko"]).detector.module.basenet
+        self.ocr.requires_grad_(False)
+
+        self.register_buffer("ocr_shift", torch.tensor([0.03, 0.088, 0.188]))
+        self.register_buffer("ocr_scale", torch.tensor([0.458, 0.448, 0.45]))
+
+    def get_ocr_features(self, images: torch.Tensor) -> tuple[torch.Tensor, ...]:
+        images = images + self.shift[None, :, None, None]
+        images = images / self.scale[None, :, None, None]
+
+        features = self.ocr.eval()(F.avg_pool2d(images, 2))
+        features = [F.normalize(feature, dim=1, eps=1e-6) for feature in features]
+        return features
 
     def forward(self, images: torch.Tensor) -> tuple[torch.Tensor, ...]:
         recon = self.decoder(self.encoder(images))
         loss_recon = F.l1_loss(images, recon)
-        loss_ocr = self.ocr(images, recon)
+
+        ocr_images = self.get_ocr_features(images)
+        ocr_recon = self.get_ocr_features(recon)
+        loss_ocr = sum(map(F.l1_loss, ocr_images, ocr_recon))
 
         loss = loss_recon + loss_ocr
         return recon, loss, loss_recon, loss_ocr
