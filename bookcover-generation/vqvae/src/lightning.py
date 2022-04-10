@@ -41,8 +41,8 @@ class VQVAETrainingModule(LightningModule):
         self.register_buffer("ocr_scale", torch.tensor([0.458, 0.448, 0.45]))
 
     def get_ocr_features(self, images: torch.Tensor) -> tuple[torch.Tensor, ...]:
-        images = images + self.shift[None, :, None, None]
-        images = images / self.scale[None, :, None, None]
+        images = images + self.ocr_shift[None, :, None, None]
+        images = images / self.ocr_scale[None, :, None, None]
 
         features = self.ocr.eval()(F.avg_pool2d(images, 2))
         features = [F.normalize(feature, dim=1, eps=1e-6) for feature in features]
