@@ -107,7 +107,7 @@ class VQVAEEncoder(nn.Module):
         logits = self.embeddings(hidden.relu())
 
         if self.training:
-            return F.gumbel_softmax(logits, self.temperature, dim=1)
+            return F.gumbel_softmax(logits, self.temperature, True, eps=1e-6, dim=1)
         return torch.zeros_like(logits).scatter_(1, logits.argmax(1, keepdim=True), 1)
 
 
