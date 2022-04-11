@@ -29,12 +29,12 @@ optim:
     weight_decay: 1e-4
   temperature:
     start: 1.0
-    end: 0.5
-    num_decay_steps: 100000
+    end: 0.05
+    num_decay_steps: 400000
 
 train:
   name: vqvae-256-8192
-  epochs: 40
+  epochs: 50
   batch_size: 64
   accumulate_grads: 1
   validation_interval: 1
