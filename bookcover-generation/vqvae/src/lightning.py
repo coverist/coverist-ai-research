@@ -18,6 +18,7 @@ from dataset import ImageDataset
 from modeling import VQVAEDecoder, VQVAEDecoderConfig, VQVAEEncoder, VQVAEEncoderConfig
 
 try:
+    from apex import amp
     from apex.optimizers import FusedAdam as Adam
 except ModuleNotFoundError:
     from torch.optim import Adam
@@ -105,7 +106,11 @@ class VQVAETrainingModule(LightningModule):
 
     def on_load_checkpoint(self, checkpoint: dict[str, Any]):
         if "ApexMixedPrecisionPlugin" in checkpoint:
-            checkpoint.pop("ApexMixedPrecisionPlugin")
+            self.amp_state_dict = checkpoint.pop("ApexMixedPrecisionPlugin")
+
+    def on_train_start(self):
+        if self.amp_state_dict:
+            amp.load_state_dict(self.amp_state_dict)
 
 
 class VQVAEDataModule(LightningDataModule):
