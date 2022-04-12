@@ -77,7 +77,7 @@ class VQGANTrainingModule(LightningModule):
         self, images: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor, dict[str, torch.Tensor]]:
         decoded = self.decoder(self.quantizer(self.encoder(images)))
-        loss_discriminator_real = (1 + self.discriminator(images)).relu().mean()
+        loss_discriminator_real = (1 - self.discriminator(images)).relu().mean()
         loss_discriminator_fake = (1 + self.discriminator(decoded)).relu().mean()
 
         loss_discriminator = loss_discriminator_real + loss_discriminator_fake
