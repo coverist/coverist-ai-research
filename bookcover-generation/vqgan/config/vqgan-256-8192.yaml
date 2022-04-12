@@ -19,7 +19,7 @@ model:
   quantizer:
     num_embeddings: 8192
     embedding_dim: 256
-    initialize_scale: 0.01
+    initialize_scale: 0.001
   discriminator:
     num_channels: 3
     kernel_size: 4
@@ -36,6 +36,7 @@ optim:
     betas: [0.5, 0.9]
     eps: 1e-6
   loss_perceptual_weights: [1.0, 1.0, 1.0, 0.1, 0.1]
+  loss_quantization_weight: 100
   loss_generator_weight: 0.005
   num_discriminator_steps: 1
 

@@ -29,6 +29,7 @@ class VQGANTrainingModule(LightningModule):
         super().__init__()
         self.config = config
         self.loss_perceptual_weights = config.optim.loss_perceptual_weights
+        self.loss_quantization_weight = config.optim.loss_quantization_weight
         self.loss_generator_weight = config.optim.loss_generator_weight
 
         self.encoder = VQVAEEncoder(VQVAEEncoderConfig(**config.model.encoder))
@@ -62,7 +63,7 @@ class VQGANTrainingModule(LightningModule):
         loss = (
             loss_reconstruction
             + loss_perceptual
-            + loss_quantization
+            + self.loss_quantization_weight * loss_quantization
             + self.loss_generator_weight * loss_generator
         )
         metrics = {
