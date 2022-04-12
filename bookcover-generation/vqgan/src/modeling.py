@@ -73,8 +73,10 @@ class PatchDiscriminatorConfig:
 
     def __iter__(self) -> Generator[tuple[Any, ...]]:
         hidden_dims = [self.num_channels] + list(self.hidden_dims)
+        stride_padding = (self.kernel_size - 1) // 2
+
         for input_dim, output_dim in zip(hidden_dims[:-1], hidden_dims[1:]):
-            yield (input_dim, output_dim, self.kernel_size, 2, "same")
+            yield (input_dim, output_dim, self.kernel_size, 2, stride_padding)
         for _ in range(self.num_head_layers):
             yield (output_dim, output_dim, self.kernel_size, 1, "same")
 
