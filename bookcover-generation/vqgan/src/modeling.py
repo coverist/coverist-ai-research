@@ -151,7 +151,7 @@ class VQVAEQuantizer(nn.Embedding):
         inner_dot = torch.einsum("bdhw,nd->bnhw", encoded, self.weight)
 
         l2_distance = encoded_norm + latents_norm - 2 * inner_dot
-        closest_indices = l2_distance.argmax(dim=1)
+        closest_indices = l2_distance.argmin(dim=1)
 
         latents = super().forward(closest_indices).permute(0, 3, 1, 2)
         return latents
