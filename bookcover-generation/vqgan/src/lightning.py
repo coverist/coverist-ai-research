@@ -58,10 +58,9 @@ class VQGANTrainingModule(LightningModule):
         loss_reconstruction = F.l1_loss(images, decoded)
         loss_quantization = F.l1_loss(encoded, latents)
 
-        if self.current_epoch < self.use_gan_after:
+        loss_generator = 0
+        if self.current_epoch >= self.use_gan_after:
             loss_generator = -self.discriminator(decoded).mean()
-        else:
-            loss_generator = 0
 
         loss = (
             loss_reconstruction
