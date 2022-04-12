@@ -55,8 +55,8 @@ class VQGANTrainingModule(LightningModule):
             weight * loss
             for weight, loss in zip(self.loss_perceptual_weights, loss_perceptual_list)
         )
-        loss_reconstruction = F.l1_loss(images, decoded)
-        loss_quantization = F.l1_loss(encoded, latents)
+        loss_reconstruction = F.l1_loss(images.float(), decoded.float())
+        loss_quantization = F.mse_loss(encoded, latents)
 
         metrics = {
             "loss_reconstruction": loss_reconstruction,
