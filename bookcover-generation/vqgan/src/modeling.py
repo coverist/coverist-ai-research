@@ -146,6 +146,7 @@ class VQVAEQuantizer(nn.Embedding):
         nn.init.uniform_(self.weight, -config.initialize_scale, config.initialize_scale)
 
     def forward(self, encoded: torch.Tensor) -> torch.Tensor:
+        """
         encoded_norm = encoded.norm(dim=1)[:, None, :, :]
         latents_norm = self.weight.norm(dim=1)[None, :, None, None]
         inner_dot = torch.einsum("bdhw,nd->bnhw", encoded, self.weight)
@@ -155,6 +156,17 @@ class VQVAEQuantizer(nn.Embedding):
 
         latents = super().forward(closest_indices).permute(0, 3, 1, 2)
         return latents
+        """
+        logits = torch.einsum(
+            "bdhw,nd->bnhw",
+            F.normalize(encoded, dim=1),
+            F.normalize(self.weight, dim=1),
+        )
+        logits = logits / 0.07
+
+        closest_indices = logits.argmax(dim=1)
+        latents = super().forward(closest_indices).permute(0, 3, 1, 2)
+        return latents, logits, closest_indices
 
 
 class PatchDiscriminator(nn.Module):

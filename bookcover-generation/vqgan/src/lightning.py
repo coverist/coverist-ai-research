@@ -45,7 +45,7 @@ class VQGANTrainingModule(LightningModule):
         self, images: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor, dict[str, torch.Tensor]]:
         encoded = self.encoder(images)
-        latents = self.quantizer(encoded)
+        latents, logits, closest_indices = self.quantizer(encoded)
         decoded = self.decoder(encoded + (latents - encoded).detach())
 
         loss_perceptual_list = list(
@@ -56,7 +56,8 @@ class VQGANTrainingModule(LightningModule):
             for weight, loss in zip(self.loss_perceptual_weights, loss_perceptual_list)
         )
         loss_reconstruction = F.l1_loss(images, decoded)
-        loss_quantization = F.l1_loss(encoded, latents)
+        # loss_quantization = F.l1_loss(encoded, latents)
+        loss_quantization = F.cross_entropy(logits, closest_indices)
 
         metrics = {
             "loss_reconstruction": loss_reconstruction,
@@ -83,7 +84,7 @@ class VQGANTrainingModule(LightningModule):
         if self.current_epoch < self.use_gan_after:
             return None, None, {}
 
-        decoded = self.decoder(self.quantizer(self.encoder(images)))
+        decoded = self.decoder(self.quantizer(self.encoder(images))[0])
         loss_discriminator_real = (1 - self.discriminator(images)).relu().mean()
         loss_discriminator_fake = (1 + self.discriminator(decoded)).relu().mean()
 
