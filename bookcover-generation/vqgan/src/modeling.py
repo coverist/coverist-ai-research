@@ -189,6 +189,6 @@ class OCRPerceptualExtractor(nn.Module):
         images = (images + self.shift) / self.scale
         images = F.avg_pool2d(images, 2)
 
-        features = self.ocr.eval()(images)
+        features = self.model.eval()(images)
         features = [F.normalize(feature, dim=1, eps=1e-6) for feature in features]
         return features
