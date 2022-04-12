@@ -146,12 +146,12 @@ class VQVAEQuantizer(nn.Embedding):
         nn.init.normal_(self.weight, std=config.initialize_scale)
 
     def forward(self, encoded: torch.Tensor) -> torch.Tensor:
-        encoded_norm = encoded.norm(dim=1)[:, None, :, :]
-        latents_norm = self.weight.norm(dim=1)[None, :, None, None]
-        inner_dot = torch.einsum("bdhw,nd->bnhw", encoded, self.weight)
-
-        l2_distance = encoded_norm + latents_norm - 2 * inner_dot
-        closest_indices = l2_distance.argmin(dim=1)
+        distances = (
+            encoded.square().sum(1)[:, None, :, :]
+            + self.weight.square().sum(1)[None, :, None, None]
+            - 2 * torch.einsum("bdhw,nd->bnhw", encoded, self.weight)
+        )
+        closest_indices = distances.argmin(dim=1)
 
         latents = super().forward(closest_indices).permute(0, 3, 1, 2)
         return latents
