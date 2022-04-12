@@ -19,7 +19,7 @@ class VQVAELayerConfig:
 @dataclass
 class VQVAEEncoderConfig:
     num_channels: int = 3
-    num_layers: tuple[int] = (2, 2, 4, 4, 8)
+    num_layers: tuple[int] = (2, 2, 2, 4, 4)
     hidden_dims: tuple[int] = (128, 256, 512, 1024, 2048)
     middle_reduction: int = 4
     num_embeddings: int = 8192
@@ -41,7 +41,7 @@ class VQVAEEncoderConfig:
 @dataclass
 class VQVAEDecoderConfig:
     num_channels: int = 3
-    num_layers: tuple[int] = (8, 4, 4, 2, 2)
+    num_layers: tuple[int] = (4, 4, 2, 2, 2)
     hidden_dims: tuple[int] = (2048, 1024, 512, 256, 128)
     middle_reduction: int = 4
     num_embeddings: int = 8192
@@ -107,7 +107,7 @@ class VQVAEEncoder(nn.Module):
         logits = self.embeddings(hidden.relu())
 
         if self.training:
-            return F.gumbel_softmax(logits, self.temperature, eps=1e-6, dim=1)
+            return F.gumbel_softmax(logits, self.temperature, dim=1)
         return torch.zeros_like(logits).scatter_(1, logits.argmax(1, keepdim=True), 1)
 
 
