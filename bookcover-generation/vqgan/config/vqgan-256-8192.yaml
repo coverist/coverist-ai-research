@@ -40,7 +40,7 @@ optim:
   num_discriminator_steps: 1
 
 train:
-  name: vqvae-256-8192
+  name: vqgan-256-8192
   epochs: 50
   batch_size: 64
   accumulate_grads: 1
