@@ -81,7 +81,7 @@ class VQGANTrainingModule(LightningModule):
         self, images: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor, dict[str, torch.Tensor]]:
         if self.current_epoch < self.use_gan_after:
-            return None, 0, dict()
+            return None, None, {}
 
         decoded = self.decoder(self.quantizer(self.encoder(images)))
         loss_discriminator_real = (1 - self.discriminator(images)).relu().mean()
