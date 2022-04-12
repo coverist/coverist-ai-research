@@ -56,7 +56,10 @@ class VQGANTrainingModule(LightningModule):
         )
 
         loss_reconstruction = F.l1_loss(images, decoded)
-        loss_quantization = F.mse_loss(encoded, latents)
+        # loss_quantization = F.mse_loss(encoded, latents)
+        loss_quantization = F.mse_loss(encoded.detach(), latents) + 0.25 * F.mse_loss(
+            encoded, latents.detach()
+        )
         loss_generator = -self.discriminator(decoded).mean()
 
         loss = (
