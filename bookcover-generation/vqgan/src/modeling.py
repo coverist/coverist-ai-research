@@ -143,7 +143,7 @@ class VQVAEDecoder(nn.Module):
 class VQVAEQuantizer(nn.Embedding):
     def __init__(self, config: VQVAEQuantizerConfig):
         super().__init__(config.num_embeddings, config.embedding_dim)
-        nn.init.uniform_(self.weight, -config.initialize_scale, config.initialize_scale)
+        nn.init.normal_(self.weight, std=config.initialize_scale)
 
     def forward(self, encoded: torch.Tensor) -> torch.Tensor:
         encoded_norm = encoded.norm(dim=1)[:, None, :, :]
