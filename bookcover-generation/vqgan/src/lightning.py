@@ -45,7 +45,7 @@ class VQGANTrainingModule(LightningModule):
         self, images: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor, dict[str, torch.Tensor]]:
         encoded = self.encoder(images)
-        latents, logits, closest_indices = self.quantizer(encoded)
+        latents = self.quantizer(encoded)
         decoded = self.decoder(encoded + (latents - encoded).detach())
 
         loss_perceptual_list = list(
@@ -56,8 +56,7 @@ class VQGANTrainingModule(LightningModule):
             for weight, loss in zip(self.loss_perceptual_weights, loss_perceptual_list)
         )
         loss_reconstruction = F.l1_loss(images, decoded)
-        # loss_quantization = F.l1_loss(encoded, latents)
-        loss_quantization = F.cross_entropy(logits, closest_indices)
+        loss_quantization = F.l1_loss(encoded, latents)
 
         metrics = {
             "loss_reconstruction": loss_reconstruction,
@@ -84,7 +83,7 @@ class VQGANTrainingModule(LightningModule):
         if self.current_epoch < self.use_gan_after:
             return None, None, {}
 
-        decoded = self.decoder(self.quantizer(self.encoder(images))[0])
+        decoded = self.decoder(self.quantizer(self.encoder(images)))
         loss_discriminator_real = (1 - self.discriminator(images)).relu().mean()
         loss_discriminator_fake = (1 + self.discriminator(decoded)).relu().mean()
 
@@ -115,7 +114,7 @@ class VQGANTrainingModule(LightningModule):
     ) -> torch.Tensor:
         _, loss, metrics = self(images, int(optimizer_idx))
         self.log("step", self.global_step)
-        self.log_dict({f"train/{k}": v for k, v in metrics.items()})
+        self.log_dict({f"train/{k}": v for k, v in metrics.items()}, prog_bar=True)
         return loss
 
     def validation_step(
