@@ -105,7 +105,7 @@ class VQGANTrainingModule(LightningModule):
     def training_step(
         self, images: torch.Tensor, batch_idx: int, optimizer_idx: int
     ) -> torch.Tensor:
-        _, loss, metrics = self(images, optimizer_idx)
+        _, loss, metrics = self(images, int(optimizer_idx))
         self.log("step", self.global_step)
         self.log_dict({f"train/{k}": v for k, v in metrics.items()})
         return loss
