@@ -30,6 +30,7 @@ class VQGANTrainingModule(LightningModule):
         self.config = config
         self.loss_perceptual_weights = config.optim.loss_perceptual_weights
         self.loss_generator_weight = config.optim.loss_generator_weight
+        self.use_gan_after = config.optim.use_gan_after
 
         self.encoder = VQVAEEncoder(VQVAEEncoderConfig(**config.model.encoder))
         self.decoder = VQVAEDecoder(VQVAEDecoderConfig(**config.model.decoder))
@@ -54,10 +55,19 @@ class VQGANTrainingModule(LightningModule):
             weight * loss
             for weight, loss in zip(self.loss_perceptual_weights, loss_perceptual_list)
         )
-
         loss_reconstruction = F.l1_loss(images, decoded)
         loss_quantization = F.l1_loss(encoded, latents)
-        loss_generator = -self.discriminator(decoded).mean()
+
+        metrics = {
+            "loss_reconstruction": loss_reconstruction,
+            "loss_perceptual": loss_perceptual,
+            "loss_quantization": loss_quantization,
+        }
+
+        loss_generator = 0
+        if self.current_epoch >= self.use_gan_after:
+            loss_generator = -self.discriminator(decoded).mean()
+            metrics["loss_generator"] = loss_generator
 
         loss = (
             loss_reconstruction
@@ -65,17 +75,14 @@ class VQGANTrainingModule(LightningModule):
             + loss_quantization
             + self.loss_generator_weight * loss_generator
         )
-        metrics = {
-            "loss_reconstruction": loss_reconstruction,
-            "loss_perceptual": loss_perceptual,
-            "loss_quantization": loss_quantization,
-            "loss_generator": loss_generator,
-        }
         return decoded, loss, metrics
 
     def discriminator_step(
         self, images: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor, dict[str, torch.Tensor]]:
+        if self.current_epoch < self.use_gan_after:
+            return None, None, {}
+
         decoded = self.decoder(self.quantizer(self.encoder(images)))
         loss_discriminator_real = (1 - self.discriminator(images)).relu().mean()
         loss_discriminator_fake = (1 + self.discriminator(decoded)).relu().mean()

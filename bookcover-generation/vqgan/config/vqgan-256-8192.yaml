@@ -19,7 +19,7 @@ model:
   quantizer:
     num_embeddings: 8192
     embedding_dim: 256
-    initialize_scale: 0.01
+    initialize_scale: 6e-5
   discriminator:
     num_channels: 3
     kernel_size: 4
