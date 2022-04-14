@@ -189,8 +189,10 @@ class PatchDiscriminator(nn.Module):
 
 
 class OCRPerceptualLoss(nn.Module):
-    def __init__(self):
+    def __init__(self, input_size: tuple[int, int] = (128, 128)):
         super().__init__()
+        self.input_size = input_size
+
         self.model = easyocr.Reader(["ko"]).detector.module.basenet
         self.model.requires_grad_(False)
 
@@ -199,7 +201,7 @@ class OCRPerceptualLoss(nn.Module):
 
     def forward_features(self, images: torch.Tensor) -> tuple[torch.Tensor, ...]:
         images = (images + self.shift) / self.scale
-        images = F.avg_pool2d(images, 2)
+        images = F.interpolate(images, self.input_size, mode="bilinear")
 
         features = self.model.eval()(images)
         features = [F.normalize(feature, dim=1, eps=1e-6) for feature in features]

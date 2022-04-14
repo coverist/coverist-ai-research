@@ -40,7 +40,9 @@ class VQGANTrainingModule(LightningModule):
         self.discriminator = PatchDiscriminator(
             PatchDiscriminatorConfig(**config.model.discriminator)
         )
-        self.perceptual = OCRPerceptualLoss()
+        self.perceptual = OCRPerceptualLoss(
+            tuple(config.optim.criterion.perceptual_input_size)
+        )
 
     def generator_step(
         self, images: torch.Tensor
