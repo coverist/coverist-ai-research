@@ -184,7 +184,7 @@ class PatchDiscriminator(nn.Module):
 
     def forward(self, hidden: torch.Tensor) -> torch.Tensor:
         for layer in self.layers:
-            hidden = F.silu(layer(hidden), 0.02)
+            hidden = F.leaky_relu(layer(hidden), 0.02)
         return self.projection(hidden)
 
 
