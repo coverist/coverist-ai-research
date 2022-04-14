@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 
 import torch
 import torch.nn.functional as F
@@ -7,7 +7,7 @@ from pytorch_lightning import LightningModule
 from torchvision.utils import make_grid
 
 from modeling import (
-    OCRPerceptualExtractor,
+    OCRPerceptualLoss,
     PatchDiscriminator,
     PatchDiscriminatorConfig,
     VQVAEDecoder,
@@ -28,9 +28,10 @@ class VQGANTrainingModule(LightningModule):
     def __init__(self, config: DictConfig):
         super().__init__()
         self.config = config
-        self.loss_perceptual_weights = config.optim.loss_perceptual_weights
-        self.loss_quantization_weight = config.optim.loss_quantization_weight
-        self.loss_generator_weight = config.optim.loss_generator_weight
+        self.adversarial_start = config.optim.adversarial_start
+        self.perceptual_weight = config.optim.criterion.perceptual_weight
+        self.quantization_weight = config.optim.criterion.quantization_weight
+        self.generator_weight = config.optim.criterion.generator_weight
 
         self.encoder = VQVAEEncoder(VQVAEEncoderConfig(**config.model.encoder))
         self.decoder = VQVAEDecoder(VQVAEDecoderConfig(**config.model.decoder))
@@ -39,45 +40,45 @@ class VQGANTrainingModule(LightningModule):
         self.discriminator = PatchDiscriminator(
             PatchDiscriminatorConfig(**config.model.discriminator)
         )
-        self.perceptual = OCRPerceptualExtractor()
+        self.perceptual = OCRPerceptualLoss()
 
     def generator_step(
         self, images: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor, dict[str, torch.Tensor]]:
         encoded = self.encoder(images)
-        latents = self.quantizer(encoded)
+        latents, _, perplexity = self.quantizer(encoded)
         decoded = self.decoder(encoded + (latents - encoded).detach())
 
-        loss_perceptual_list = list(
-            map(F.l1_loss, self.perceptual(images), self.perceptual(decoded))
-        )
-        loss_perceptual = sum(
-            weight * loss
-            for weight, loss in zip(self.loss_perceptual_weights, loss_perceptual_list)
-        )
-
         loss_reconstruction = F.l1_loss(images, decoded)
+        loss_perceptual = self.perceptual(images, decoded)
         loss_quantization = F.mse_loss(encoded, latents)
-        loss_generator = -self.discriminator(decoded).mean()
+
+        loss_generator = 0
+        if self.current_epoch >= self.adversarial_start:
+            loss_generator = -self.discriminator(decoded).mean()
 
         loss = (
             loss_reconstruction
-            + loss_perceptual
-            + self.loss_quantization_weight * loss_quantization
-            + self.loss_generator_weight * loss_generator
+            + self.perceptual_weight * loss_perceptual
+            + self.quantization_weight * loss_quantization
+            + self.generator_weight * loss_generator
         )
         metrics = {
             "loss_reconstruction": loss_reconstruction,
             "loss_perceptual": loss_perceptual,
             "loss_quantization": loss_quantization,
             "loss_generator": loss_generator,
+            "perplexity": perplexity,
         }
         return decoded, loss, metrics
 
     def discriminator_step(
         self, images: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor, dict[str, torch.Tensor]]:
-        decoded = self.decoder(self.quantizer(self.encoder(images)))
+    ) -> tuple[Optional[torch.Tensor], Optional[torch.Tensor], dict[str, torch.Tensor]]:
+        if self.current_epoch < self.adversarial_start:
+            return None, None, {"loss_discriminator": 0}
+
+        decoded = self.decoder(self.quantizer(self.encoder(images))[0])
         loss_discriminator_real = (1 - self.discriminator(images)).relu().mean()
         loss_discriminator_fake = (1 + self.discriminator(decoded)).relu().mean()
 
@@ -86,7 +87,7 @@ class VQGANTrainingModule(LightningModule):
 
     def forward(
         self, images: torch.Tensor, optimizer_idx: int
-    ) -> tuple[torch.Tensor, torch.Tensor, dict[str, torch.Tensor]]:
+    ) -> tuple[Optional[torch.Tensor], Optional[torch.Tensor], dict[str, torch.Tensor]]:
         if self.training:
             self.encoder.requires_grad_(optimizer_idx == 0)
             self.decoder.requires_grad_(optimizer_idx == 0)
@@ -105,7 +106,7 @@ class VQGANTrainingModule(LightningModule):
 
     def training_step(
         self, images: torch.Tensor, batch_idx: int, optimizer_idx: int
-    ) -> torch.Tensor:
+    ) -> Optional[torch.Tensor]:
         _, loss, metrics = self(images, int(optimizer_idx))
         self.log("step", self.global_step)
         self.log_dict({f"train/{k}": v for k, v in metrics.items()})

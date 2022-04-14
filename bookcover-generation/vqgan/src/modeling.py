@@ -145,15 +145,28 @@ class VQVAEQuantizer(nn.Embedding):
         super().__init__(config.num_embeddings, config.embedding_dim)
         nn.init.normal_(self.weight, std=config.initialize_scale)
 
-    def forward(self, encoded: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self, encoded: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         distances = (
             encoded.square().sum(1)[:, None, :, :]
             + self.weight.square().sum(1)[None, :, None, None]
             - 2 * torch.einsum("bdhw,nd->bnhw", encoded, self.weight)
         )
-        latents = super().forward(distances.argmin(dim=1))
+        closest_indices = distances.argmin(dim=1)
+        flatten_indices = closest_indices.flatten()
+
+        latents = super().forward(closest_indices)
         latents = latents.permute(0, 3, 1, 2)
-        return latents
+
+        embedding_usages = flatten_indices.new_zeros(self.num_embeddings)
+        embedding_usages.scatter_(0, flatten_indices, 1, reduce="add")
+        embedding_usages /= flatten_indices.size(0)
+
+        perplexity = -embedding_usages * (embedding_usages + 1e-10).log()
+        perplexity = perplexity.sum().exp()
+
+        return latents, closest_indices, perplexity
 
 
 class PatchDiscriminator(nn.Module):
@@ -171,11 +184,11 @@ class PatchDiscriminator(nn.Module):
 
     def forward(self, hidden: torch.Tensor) -> torch.Tensor:
         for layer in self.layers:
-            hidden = F.leaky_relu(layer(hidden), 0.02)
+            hidden = F.silu(layer(hidden), 0.02)
         return self.projection(hidden)
 
 
-class OCRPerceptualExtractor(nn.Module):
+class OCRPerceptualLoss(nn.Module):
     def __init__(self):
         super().__init__()
         self.model = easyocr.Reader(["ko"]).detector.module.basenet
@@ -184,10 +197,15 @@ class OCRPerceptualExtractor(nn.Module):
         self.register_buffer("shift", torch.tensor([[[[0.03]], [[0.088]], [[0.188]]]]))
         self.register_buffer("scale", torch.tensor([[[[0.458]], [[0.448]], [[0.45]]]]))
 
-    def forward(self, images: torch.Tensor) -> tuple[torch.Tensor, ...]:
+    def forward_features(self, images: torch.Tensor) -> tuple[torch.Tensor, ...]:
         images = (images + self.shift) / self.scale
         images = F.avg_pool2d(images, 2)
 
         features = self.model.eval()(images)
         features = [F.normalize(feature, dim=1, eps=1e-6) for feature in features]
         return features
+
+    def forward(self, images: torch.Tensor, decoded: torch.Tensor) -> torch.Tensor:
+        images_features = self.forward_features(images)
+        decoded_features = self.forward_features(decoded)
+        return sum(map(F.l1_loss, images_features, decoded_features))
