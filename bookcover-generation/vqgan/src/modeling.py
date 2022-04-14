@@ -161,7 +161,7 @@ class VQVAEQuantizer(nn.Embedding):
 
         embedding_usages = flatten_indices.new_zeros(self.num_embeddings)
         embedding_usages.scatter_(0, flatten_indices, 1, reduce="add")
-        embedding_usages /= flatten_indices.size(0)
+        embedding_usages = embedding_usages / flatten_indices.size(0)
 
         perplexity = -embedding_usages * (embedding_usages + 1e-10).log()
         perplexity = perplexity.sum().exp()
