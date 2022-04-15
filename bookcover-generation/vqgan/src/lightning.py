@@ -53,7 +53,7 @@ class VQGANTrainingModule(LightningModule):
 
         loss_reconstruction = F.l1_loss(images, decoded)
         loss_perceptual = self.perceptual(images, decoded)
-        loss_quantization = F.mse_loss(encoded, latents)
+        loss_quantization = F.mse_loss(encoded, latents.detach())
 
         loss_generator = 0
         if self.current_epoch >= self.adversarial_start:
