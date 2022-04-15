@@ -48,7 +48,7 @@ class VQGANTrainingModule(LightningModule):
         self, images: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor, dict[str, torch.Tensor]]:
         encoded = self.encoder(images)
-        latents, _, perplexity, loss_quantization = self.quantizer(encoded)
+        latents, _, loss_quantization, perplexity = self.quantizer(encoded)
         decoded = self.decoder(latents)  # encoded + (latents - encoded).detach())
 
         loss_reconstruction = F.l1_loss(images, decoded)

@@ -189,9 +189,7 @@ class VQVAEQuantizer(nn.Module):
         flatten_indices = closest_indices.flatten()
 
         latents = F.normalize(self.embeddings(closest_indices).permute(0, 3, 1, 2))
-        loss_quantization = F.cross_entropy(
-            cosine_similarities, closest_indices
-        )  # F.mse_loss(latents, encoded)
+        loss_quantization = F.mse_loss(latents, encoded)
 
         latents = encoded + (latents - encoded).detach()
         latents = self.expansion(latents)
@@ -200,7 +198,7 @@ class VQVAEQuantizer(nn.Module):
         embedding_usages.scatter_(0, flatten_indices, 1, reduce="add")
         embedding_usages = embedding_usages / flatten_indices.size(0)
 
-        perplexity = -embedding_usages * (embedding_usages + 1e-10).log()
+        perplexity = -embedding_usages * (embedding_usages + 1e-6).log()
         perplexity = perplexity.sum().exp()
 
         return latents, closest_indices, loss_quantization, perplexity
