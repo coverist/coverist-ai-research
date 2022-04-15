@@ -171,7 +171,9 @@ class VQVAEQuantizer(nn.Embedding):
             new_embeddings = new_embeddings * (embedding_usages[:, None] > 0).float()
 
             new_embeddings.scatter_add_(
-                0, flatten_indices, encoded.permute(0, 2, 3, 1).flatten(0, 2).float()
+                0,
+                flatten_indices[:, None],
+                encoded.permute(0, 2, 3, 1).flatten(0, 2).float(),
             )
             new_embeddings = new_embeddings / embedding_usages[:, None].clamp(1)
 
