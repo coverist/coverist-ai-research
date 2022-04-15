@@ -140,10 +140,11 @@ class VQVAEDecoder(nn.Module):
         return hidden.tanh()
 
 
+"""
 class VQVAEQuantizer(nn.Embedding):
     def __init__(self, config: VQVAEQuantizerConfig):
         super().__init__(config.num_embeddings, config.embedding_dim)
-        nn.init.orthogonal_(self.weight, gain=config.initialize_scale)
+        nn.init.normal_(self.weight, std=config.initialize_scale)
 
     def forward(
         self, encoded: torch.Tensor
@@ -167,6 +168,40 @@ class VQVAEQuantizer(nn.Embedding):
         perplexity = perplexity.sum().exp()
 
         return latents, closest_indices, perplexity
+"""
+
+
+class VQVAEQuantizer(nn.Module):
+    def __init__(self, config: VQVAEQuantizerConfig):
+        super().__init__()
+        self.embeddings = nn.Embedding(config.num_embeddings, 32)
+        self.projection = nn.Linear(config.embedding_dim, 32)
+        self.expansion = nn.Linear(32, config.embedding_dim)
+
+    def forward(
+        self, encoded: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        encoded = self.projection(encoded)
+        cosine_similarities = torch.einsum(
+            "bdhw,nd->bnhw", F.normalize(encoded), F.normalize(self.embeddings.weight)
+        )
+        closest_indices = cosine_similarities.argmax(dim=1)
+        flatten_indices = closest_indices.flatten()
+
+        latents = self.embeddings(closest_indices).permute(0, 3, 1, 2)
+        loss_quantization = F.mse_loss(latents, encoded)
+
+        latents = encoded + (latents - encoded).detach()
+        latents = self.expansion(latents)
+
+        embedding_usages = flatten_indices.new_zeros(self.num_embeddings)
+        embedding_usages.scatter_(0, flatten_indices, 1, reduce="add")
+        embedding_usages = embedding_usages / flatten_indices.size(0)
+
+        perplexity = -embedding_usages * (embedding_usages + 1e-10).log()
+        perplexity = perplexity.sum().exp()
+
+        return latents, closest_indices, loss_quantization, perplexity
 
 
 class PatchDiscriminator(nn.Module):

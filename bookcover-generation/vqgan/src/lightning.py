@@ -48,12 +48,12 @@ class VQGANTrainingModule(LightningModule):
         self, images: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor, dict[str, torch.Tensor]]:
         encoded = self.encoder(images)
-        latents, _, perplexity = self.quantizer(encoded)
-        decoded = self.decoder(encoded + (latents - encoded).detach())
+        latents, _, perplexity, loss_quantization = self.quantizer(encoded)
+        decoded = self.decoder(latents)  # encoded + (latents - encoded).detach())
 
         loss_reconstruction = F.l1_loss(images, decoded)
         loss_perceptual = self.perceptual(images, decoded)
-        loss_quantization = F.mse_loss(encoded, latents)
+        # loss_quantization = F.mse_loss(encoded, latents)
 
         loss_generator = 0
         if self.current_epoch >= self.adversarial_start:
