@@ -143,7 +143,7 @@ class VQVAEDecoder(nn.Module):
 class VQVAEQuantizer(nn.Embedding):
     def __init__(self, config: VQVAEQuantizerConfig):
         super().__init__(config.num_embeddings, config.embedding_dim)
-        nn.init.normal_(self.weight, std=config.initialize_scale)
+        nn.init.orthogonal_(self.weight, std=config.initialize_scale)
 
     def forward(
         self, encoded: torch.Tensor
@@ -161,23 +161,10 @@ class VQVAEQuantizer(nn.Embedding):
 
         embedding_usages = flatten_indices.new_zeros(self.num_embeddings)
         embedding_usages.scatter_(0, flatten_indices, 1, reduce="add")
+        embedding_usages = embedding_usages / flatten_indices.size(0)
 
-        perplexity = embedding_usages / flatten_indices.size(0)
-        perplexity = -perplexity * (perplexity + 1e-10).log()
+        perplexity = -embedding_usages * (embedding_usages + 1e-10).log()
         perplexity = perplexity.sum().exp()
-
-        if self.training:
-            new_embeddings = self.weight.float().clone()
-            new_embeddings = new_embeddings * (embedding_usages[:, None] == 0).float()
-
-            new_embeddings.scatter_add_(
-                0,
-                flatten_indices[:, None],
-                encoded.permute(0, 2, 3, 1).flatten(0, 2).float(),
-            )
-            new_embeddings = new_embeddings / embedding_usages[:, None].clamp(1)
-
-            self.weight.data.mul_(0.99).add_(new_embeddings, alpha=1 - 0.99)
 
         return latents, closest_indices, perplexity
 
