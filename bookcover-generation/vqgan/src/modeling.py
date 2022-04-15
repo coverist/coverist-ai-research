@@ -61,7 +61,7 @@ class VQVAEDecoderConfig:
 class VQVAEQuantizerConfig:
     num_embeddings: int = 8192
     embedding_dim: int = 256
-    initialize_scale: float = 0.01
+    factorization_dim: int = 16
 
 
 @dataclass
@@ -140,55 +140,24 @@ class VQVAEDecoder(nn.Module):
         return hidden.tanh()
 
 
-"""
-class VQVAEQuantizer(nn.Embedding):
-    def __init__(self, config: VQVAEQuantizerConfig):
-        super().__init__(config.num_embeddings, config.embedding_dim)
-        nn.init.normal_(self.weight, std=config.initialize_scale)
-
-    def forward(
-        self, encoded: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        distances = (
-            encoded.square().sum(1)[:, None, :, :]
-            + self.weight.square().sum(1)[None, :, None, None]
-            - 2 * torch.einsum("bdhw,nd->bnhw", encoded, self.weight)
-        )
-        closest_indices = distances.argmin(dim=1)
-        flatten_indices = closest_indices.flatten()
-
-        latents = super().forward(closest_indices)
-        latents = latents.permute(0, 3, 1, 2)
-
-        embedding_usages = flatten_indices.new_zeros(self.num_embeddings)
-        embedding_usages.scatter_(0, flatten_indices, 1, reduce="add")
-        embedding_usages = embedding_usages / flatten_indices.size(0)
-
-        perplexity = -embedding_usages * (embedding_usages + 1e-10).log()
-        perplexity = perplexity.sum().exp()
-
-        return latents, closest_indices, perplexity
-"""
-
-
 class VQVAEQuantizer(nn.Module):
     def __init__(self, config: VQVAEQuantizerConfig):
         super().__init__()
-        self.embeddings = nn.Embedding(config.num_embeddings, 32)
-        self.projection = nn.Conv2d(config.embedding_dim, 32, 1)
-        self.expansion = nn.Conv2d(32, config.embedding_dim, 1)
+        self.embeddings = nn.Embedding(config.num_embeddings, config.factorization_dim)
+        self.projection = nn.Conv2d(config.embedding_dim, config.factorization_dim, 1)
+        self.expansion = nn.Conv2d(config.factorization_dim, config.embedding_dim, 1)
 
     def forward(
         self, encoded: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         encoded = F.normalize(self.projection(encoded))
-        cosine_similarities = torch.einsum(
-            "bdhw,nd->bnhw", encoded, F.normalize(self.embeddings.weight)
-        )
+        embeddings = F.normalize(self.embeddings.weight)
+
+        cosine_similarities = torch.einsum("bdhw,nd->bnhw", encoded, embeddings)
         closest_indices = cosine_similarities.argmax(dim=1)
         flatten_indices = closest_indices.flatten()
 
-        latents = F.normalize(self.embeddings(closest_indices).permute(0, 3, 1, 2))
+        latents = F.embedding(closest_indices, embeddings).permute(0, 3, 1, 2)
         loss_quantization = F.mse_loss(latents, encoded)
 
         latents = encoded + (latents - encoded).detach()
