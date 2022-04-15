@@ -167,12 +167,13 @@ class VQVAEQuantizer(nn.Embedding):
         perplexity = perplexity.sum().exp()
 
         if self.training:
-            averaged_encoded = encoded.permute(0, 2, 3, 1).flatten(0, 2)
-            averaged_encoded = averaged_encoded / (embedding_usages[:, None] + 1e-6)
-
-            new_embeddings = self.weight.clone()
+            new_embeddings = self.weight.float().clone()
             new_embeddings = new_embeddings * (embedding_usages[:, None] > 0).float()
-            new_embeddings.scatter_add_(0, flatten_indices, averaged_encoded)
+
+            new_embeddings.scatter_add_(
+                0, flatten_indices, encoded.permute(0, 2, 3, 1).flatten(0, 2)
+            )
+            new_embeddings = new_embeddings / embedding_usages[:, None].clamp(1)
 
             self.weight.data.mul_(0.99).add_(new_embeddings, alpha=1 - 0.99)
 
