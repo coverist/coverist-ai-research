@@ -175,8 +175,8 @@ class VQVAEQuantizer(nn.Module):
     def __init__(self, config: VQVAEQuantizerConfig):
         super().__init__()
         self.embeddings = nn.Embedding(config.num_embeddings, 32)
-        self.projection = nn.Linear(config.embedding_dim, 32)
-        self.expansion = nn.Linear(32, config.embedding_dim)
+        self.projection = nn.Conv2d(config.embedding_dim, 32, 1)
+        self.expansion = nn.Conv2d(32, config.embedding_dim, 1)
 
     def forward(
         self, encoded: torch.Tensor
