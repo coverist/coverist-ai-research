@@ -194,7 +194,7 @@ class VQVAEQuantizer(nn.Module):
         latents = encoded + (latents - encoded).detach()
         latents = self.expansion(latents)
 
-        embedding_usages = flatten_indices.new_zeros(self.num_embeddings)
+        embedding_usages = flatten_indices.new_zeros(self.embeddings.num_embeddings)
         embedding_usages.scatter_(0, flatten_indices, 1, reduce="add")
         embedding_usages = embedding_usages / flatten_indices.size(0)
 
