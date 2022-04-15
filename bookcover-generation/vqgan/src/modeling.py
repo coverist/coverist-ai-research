@@ -181,14 +181,14 @@ class VQVAEQuantizer(nn.Module):
     def forward(
         self, encoded: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-        encoded = self.projection(encoded)
+        encoded = F.normalize(self.projection(encoded))
         cosine_similarities = torch.einsum(
-            "bdhw,nd->bnhw", F.normalize(encoded), F.normalize(self.embeddings.weight)
+            "bdhw,nd->bnhw", encoded, F.normalize(self.embeddings.weight)
         )
         closest_indices = cosine_similarities.argmax(dim=1)
         flatten_indices = closest_indices.flatten()
 
-        latents = self.embeddings(closest_indices).permute(0, 3, 1, 2)
+        latents = F.normalize(self.embeddings(closest_indices).permute(0, 3, 1, 2))
         loss_quantization = F.mse_loss(latents, encoded)
 
         latents = encoded + (latents - encoded).detach()
