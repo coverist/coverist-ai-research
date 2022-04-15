@@ -181,10 +181,9 @@ class VQVAEQuantizer(nn.Module):
     def forward(
         self, encoded: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        encoded = self.projection(encoded)
         cosine_similarities = torch.einsum(
-            "bdhw,nd->bnhw",
-            F.normalize(self.projection(encoded)),
-            F.normalize(self.embeddings.weight),
+            "bdhw,nd->bnhw", F.normalize(encoded), F.normalize(self.embeddings.weight)
         )
         closest_indices = cosine_similarities.argmax(dim=1)
         flatten_indices = closest_indices.flatten()
