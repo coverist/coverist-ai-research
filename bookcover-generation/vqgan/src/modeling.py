@@ -163,12 +163,12 @@ class VQVAEQuantizer(nn.Embedding):
         embedding_usages.scatter_(0, flatten_indices, 1, reduce="add")
 
         perplexity = embedding_usages / flatten_indices.size(0)
-        perplexity = -perplexity * (embedding_usages + 1e-10).log()
+        perplexity = -perplexity * (perplexity + 1e-10).log()
         perplexity = perplexity.sum().exp()
 
         if self.training:
             new_embeddings = self.weight.float().clone()
-            new_embeddings = new_embeddings * (embedding_usages[:, None] > 0).float()
+            new_embeddings = new_embeddings * (embedding_usages[:, None] == 0).float()
 
             new_embeddings.scatter_add_(
                 0,
