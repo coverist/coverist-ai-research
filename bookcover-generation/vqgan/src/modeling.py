@@ -189,7 +189,9 @@ class VQVAEQuantizer(nn.Module):
         flatten_indices = closest_indices.flatten()
 
         latents = F.normalize(self.embeddings(closest_indices).permute(0, 3, 1, 2))
-        loss_quantization = F.mse_loss(latents, encoded)
+        loss_quantization = F.cross_entropy(
+            cosine_similarities, closest_indices
+        )  # F.mse_loss(latents, encoded)
 
         latents = encoded + (latents - encoded).detach()
         latents = self.expansion(latents)
