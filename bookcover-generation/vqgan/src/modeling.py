@@ -152,9 +152,7 @@ class VQVAEQuantizer(nn.Module):
     def forward(
         self, encoded: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-        encoded_unnormalized = self.projection(encoded)
-
-        encoded = F.normalize(encoded_unnormalized, eps=1e-6)
+        encoded = F.normalize(self.projection(encoded), eps=1e-6)
         embeddings = F.normalize(self.embeddings.weight, eps=1e-6)
         cosine_similarities = torch.einsum("bdhw,nd->bnhw", encoded, embeddings)
 
