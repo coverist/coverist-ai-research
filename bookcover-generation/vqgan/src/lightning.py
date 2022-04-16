@@ -70,6 +70,7 @@ class VQGANTrainingModule(LightningModule):
             "loss_quantization": loss_quantization,
             "loss_generator": loss_generator,
             "perplexity": perplexity,
+            "encoding_norms": encoded.norm(dim=1).mean(),
         }
         return decoded, loss, metrics
 
