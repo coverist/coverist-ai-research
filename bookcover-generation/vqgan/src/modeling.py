@@ -105,10 +105,17 @@ class VQVAELayer(nn.Module):
         )
 
     def forward(self, hidden: torch.Tensor) -> torch.Tensor:
-        shortcut = self.upsample(self.shortcut(self.pool(hidden)))
+        # shortcut = self.upsample(self.shortcut(self.pool(hidden)))
+        shortcut = self.upsample(self.pool(hidden))
         hidden = self.conv1(hidden.relu())
         hidden = self.conv2(self.upsample(hidden.relu()))
         hidden = self.conv3(self.pool(hidden.relu()))
+        if shortcut.size(1) > hidden.size(1):
+            shortcut = shortcut[:, : hidden.size(1)]
+        elif shortcut.size(1) < hidden.size(1):
+            shortcut = F.pad(
+                shortcut, (0, 0, 0, 0, 0, hidden.size(1) - shortcut.size(1))
+            )
         return hidden + shortcut
 
 
