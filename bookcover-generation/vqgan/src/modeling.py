@@ -88,11 +88,6 @@ class VQVAELayer(nn.Module):
         self.conv2 = nn.Conv2d(config.middle_dim, config.middle_dim, 3, padding=1)
         self.conv3 = nn.Conv2d(config.middle_dim, config.output_dim, 1)
 
-        self.shortcut = (
-            nn.Conv2d(config.input_dim, config.output_dim, 1)
-            if config.input_dim != config.output_dim
-            else nn.Identity()
-        )
         self.pool = (
             nn.AvgPool2d(config.pooling)
             if config.pooling is not None
@@ -105,17 +100,17 @@ class VQVAELayer(nn.Module):
         )
 
     def forward(self, hidden: torch.Tensor) -> torch.Tensor:
-        # shortcut = self.upsample(self.shortcut(self.pool(hidden)))
         shortcut = self.upsample(self.pool(hidden))
+
         hidden = self.conv1(hidden.relu())
         hidden = self.conv2(self.upsample(hidden.relu()))
         hidden = self.conv3(self.pool(hidden.relu()))
-        if shortcut.size(1) > hidden.size(1):
-            shortcut = shortcut[:, : hidden.size(1)]
+
+        padding_dim = hidden.size(1) - shortcut.size(1)
+        if padding_dim < 0:
+            shortcut = shortcut[:, :-padding_dim]
         elif shortcut.size(1) < hidden.size(1):
-            shortcut = F.pad(
-                shortcut, (0, 0, 0, 0, 0, hidden.size(1) - shortcut.size(1))
-            )
+            shortcut = F.pad(shortcut, (0, 0, 0, 0, 0, padding_dim))
         return hidden + shortcut
 
 
@@ -167,7 +162,7 @@ class VQVAEQuantizer(nn.Module):
         flatten_indices = closest_indices.flatten()
 
         latents = F.embedding(closest_indices, embeddings).permute(0, 3, 1, 2)
-        loss_quantization = F.mse_loss(encoded_unnormalized, latents)
+        loss_quantization = F.mse_loss(encoded, latents)
 
         latents = encoded + (latents - encoded).detach()
         latents = self.expansion(latents)
