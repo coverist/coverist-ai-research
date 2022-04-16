@@ -137,7 +137,7 @@ class VQVAEDecoder(nn.Module):
         hidden = self.stem(latents)
         hidden = self.layers(hidden)
         hidden = self.head(hidden.relu())
-        return hidden.tanh()
+        return hidden
 
 
 class VQVAEQuantizer(nn.Module):

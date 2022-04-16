@@ -123,7 +123,7 @@ class VQGANTrainingModule(LightningModule):
         return images, decoded
 
     def validation_epoch_end(self, outputs: list[tuple[torch.Tensor, torch.Tensor]]):
-        images = torch.stack(outputs[0], dim=1).flatten(0, 1)
+        images = torch.stack(outputs[0], dim=1).flatten(0, 1).clamp(-1, 1)
         nrow = int(images.size(0) ** 0.5) // 2 * 2
         grid = make_grid(images, nrow, value_range=(-1, 1))
         self.logger.log_image("val/reconstructed", [grid])
