@@ -40,10 +40,8 @@ class VQGANTrainingModule(LightningModule):
 
         self.encoder = VQVAEEncoder(VQVAEEncoderConfig(**config.model.encoder))
         self.decoder = VQVAEDecoder(VQVAEDecoderConfig(**config.model.decoder))
-        self.quantizer = VQVAEQuantizer(VQVAEQuantizerConfig(**config.model.quantizer))
-
         self.decoder_ema = VQVAEDecoder(VQVAEDecoderConfig(**config.model.decoder))
-        self.decoder_ema.load_state_dict(self.decoder.state_dict())
+        self.quantizer = VQVAEQuantizer(VQVAEQuantizerConfig(**config.model.quantizer))
 
         self.discriminator = PatchDiscriminator(
             PatchDiscriminatorConfig(**config.model.discriminator)
