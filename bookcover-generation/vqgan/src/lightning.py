@@ -30,7 +30,7 @@ class VQGANTrainingModule(LightningModule):
         super().__init__()
         self.config = config
 
-        self.decoder_ema_decay = config.optim.decoder_ema_decay
+        self.ema_decay = config.optim.ema_decay
         self.model_average_start = config.optim.model_average_start
         self.adversarial_start = config.optim.adversarial_start
 
@@ -40,8 +40,13 @@ class VQGANTrainingModule(LightningModule):
 
         self.encoder = VQVAEEncoder(VQVAEEncoderConfig(**config.model.encoder))
         self.decoder = VQVAEDecoder(VQVAEDecoderConfig(**config.model.decoder))
-        self.decoder_ema = VQVAEDecoder(VQVAEDecoderConfig(**config.model.decoder))
         self.quantizer = VQVAEQuantizer(VQVAEQuantizerConfig(**config.model.quantizer))
+
+        self.encoder_ema = VQVAEEncoder(VQVAEEncoderConfig(**config.model.encoder))
+        self.decoder_ema = VQVAEDecoder(VQVAEDecoderConfig(**config.model.decoder))
+        self.quantizer_ema = VQVAEQuantizer(
+            VQVAEQuantizerConfig(**config.model.quantizer)
+        )
 
         self.discriminator = PatchDiscriminator(
             PatchDiscriminatorConfig(**config.model.discriminator)
@@ -53,9 +58,14 @@ class VQGANTrainingModule(LightningModule):
     def generator_step(
         self, images: torch.Tensor, use_ema: bool = False
     ) -> tuple[torch.Tensor, torch.Tensor, dict[str, torch.Tensor]]:
-        encoded = self.encoder(images)
-        latents, _, loss_quantization, perplexity = self.quantizer(encoded)
-        decoded = self.decoder_ema(latents) if use_ema else self.decoder(latents)
+        if use_ema:
+            encoded = self.encoder_ema(images)
+            latents, _, loss_quantization, perplexity = self.quantizer_ema(encoded)
+            decoded = self.decoder_ema(latents)
+        else:
+            encoded = self.encoder(images)
+            latents, _, loss_quantization, perplexity = self.quantizer(encoded)
+            decoded = self.decoder(latents)
 
         loss_reconstruction = F.l1_loss(images, decoded)
         loss_perceptual = self.perceptual(images, decoded)
@@ -165,14 +175,20 @@ class VQGANTrainingModule(LightningModule):
     def on_before_optimizer_step(self, optimizer: Optimizer, optimizer_idx: int):
         if optimizer_idx != 0:
             return
+        decay = 0 if self.current_epoch >= self.model_average_start else self.ema_decay
 
-        decay = 0.0
-        if self.current_epoch >= self.model_average_start:
-            decay = self.decoder_ema_decay
-
+        for p1, p2 in zip(self.encoder.parameters(), self.encoder_ema.parameters()):
+            p2.copy_(decay * p2.float() + (1 - decay) * p1.float())
         for p1, p2 in zip(self.decoder.parameters(), self.decoder_ema.parameters()):
             p2.copy_(decay * p2.float() + (1 - decay) * p1.float())
+        for p1, p2 in zip(self.quantizer.parameters(), self.quantizer_ema.parameters()):
+            p2.copy_(decay * p2.float() + (1 - decay) * p1.float())
+
+        for b1, b2 in zip(self.encoder.buffers(), self.encoder_ema.buffers()):
+            b2.copy_(b1)
         for b1, b2 in zip(self.decoder.buffers(), self.decoder_ema.buffers()):
+            b2.copy_(b1)
+        for b1, b2 in zip(self.quantizer.buffers(), self.quantizer_ema.buffers()):
             b2.copy_(b1)
 
     def on_load_checkpoint(self, checkpoint: dict[str, Any]):

@@ -40,7 +40,7 @@ optim:
     perceptual_weight: 0.1
     quantization_weight: 1
     generator_weight: 0.001
-  decoder_ema_decay: 0.9999
+  ema_decay: 0.9999
   model_average_start: 5
   num_discriminator_steps: 1
   adversarial_start: 20
