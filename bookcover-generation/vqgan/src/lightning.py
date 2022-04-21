@@ -40,8 +40,10 @@ class VQGANTrainingModule(LightningModule):
 
         self.encoder = VQVAEEncoder(VQVAEEncoderConfig(**config.model.encoder))
         self.decoder = VQVAEDecoder(VQVAEDecoderConfig(**config.model.decoder))
-        self.decoder_ema = VQVAEDecoder(VQVAEDecoderConfig(**config.model.decoder))
         self.quantizer = VQVAEQuantizer(VQVAEQuantizerConfig(**config.model.quantizer))
+
+        self.decoder_ema = VQVAEDecoder(VQVAEDecoderConfig(**config.model.decoder))
+        self.decoder_ema.load_state_dict(self.decoder.state_dict())
 
         self.discriminator = PatchDiscriminator(
             PatchDiscriminatorConfig(**config.model.discriminator)
@@ -124,7 +126,7 @@ class VQGANTrainingModule(LightningModule):
         self, images: torch.Tensor, batch_idx: int
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         decoded, _, metrics = self(images, optimizer_idx=0)
-        decoded_ema, _, metrics_ema = self(images, optimizer_idx=0)
+        decoded_ema, _, metrics_ema = self(images, optimizer_idx=0, use_ema=True)
         self.log("step", self.global_step)
         self.log_dict({f"val/{k}": v for k, v in metrics.items()})
         self.log_dict({f"val_ema/{k}": v for k, v in metrics_ema.items()})
