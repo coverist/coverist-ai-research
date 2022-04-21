@@ -182,3 +182,4 @@ cython_debug/
 wandb
 backups
 .DS_Store
+*.ipynb
