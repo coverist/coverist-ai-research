@@ -4,7 +4,6 @@ import torch
 import torch.nn.functional as F
 from omegaconf import DictConfig
 from pytorch_lightning import LightningModule
-from torch.optim import Optimizer
 from torchvision.utils import make_grid
 
 from modeling import (
@@ -29,11 +28,7 @@ class VQGANTrainingModule(LightningModule):
     def __init__(self, config: DictConfig):
         super().__init__()
         self.config = config
-
-        self.ema_decay = config.optim.ema_decay
-        self.model_average_start = config.optim.model_average_start
         self.adversarial_start = config.optim.adversarial_start
-
         self.perceptual_weight = config.optim.criterion.perceptual_weight
         self.quantization_weight = config.optim.criterion.quantization_weight
         self.generator_weight = config.optim.criterion.generator_weight
@@ -41,12 +36,6 @@ class VQGANTrainingModule(LightningModule):
         self.encoder = VQVAEEncoder(VQVAEEncoderConfig(**config.model.encoder))
         self.decoder = VQVAEDecoder(VQVAEDecoderConfig(**config.model.decoder))
         self.quantizer = VQVAEQuantizer(VQVAEQuantizerConfig(**config.model.quantizer))
-
-        self.encoder_ema = VQVAEEncoder(VQVAEEncoderConfig(**config.model.encoder))
-        self.decoder_ema = VQVAEDecoder(VQVAEDecoderConfig(**config.model.decoder))
-        self.quantizer_ema = VQVAEQuantizer(
-            VQVAEQuantizerConfig(**config.model.quantizer)
-        )
 
         self.discriminator = PatchDiscriminator(
             PatchDiscriminatorConfig(**config.model.discriminator)
@@ -56,16 +45,11 @@ class VQGANTrainingModule(LightningModule):
         )
 
     def generator_step(
-        self, images: torch.Tensor, use_ema: bool = False
+        self, images: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor, dict[str, torch.Tensor]]:
-        if use_ema:
-            encoded = self.encoder_ema(images)
-            latents, _, loss_quantization, perplexity = self.quantizer_ema(encoded)
-            decoded = self.decoder_ema(latents)
-        else:
-            encoded = self.encoder(images)
-            latents, _, loss_quantization, perplexity = self.quantizer(encoded)
-            decoded = self.decoder(latents)
+        encoded = self.encoder(images)
+        latents, _, loss_quantization, perplexity = self.quantizer(encoded)
+        decoded = self.decoder(latents)
 
         loss_reconstruction = F.l1_loss(images, decoded)
         loss_perceptual = self.perceptual(images, decoded)
@@ -91,7 +75,7 @@ class VQGANTrainingModule(LightningModule):
         return decoded, loss, metrics
 
     def discriminator_step(
-        self, images: torch.Tensor, use_ema: bool = False
+        self, images: torch.Tensor
     ) -> tuple[Optional[torch.Tensor], Optional[torch.Tensor], dict[str, torch.Tensor]]:
         if self.current_epoch < self.adversarial_start:
             return None, None, {"loss_discriminator": 0}
@@ -104,7 +88,7 @@ class VQGANTrainingModule(LightningModule):
         return decoded, loss_discriminator, {"loss_discriminator": loss_discriminator}
 
     def forward(
-        self, images: torch.Tensor, optimizer_idx: int, use_ema: bool = False
+        self, images: torch.Tensor, optimizer_idx: int
     ) -> tuple[Optional[torch.Tensor], Optional[torch.Tensor], dict[str, torch.Tensor]]:
         if self.training:
             self.encoder.requires_grad_(optimizer_idx == 0)
@@ -118,9 +102,9 @@ class VQGANTrainingModule(LightningModule):
             self.discriminator.train(optimizer_idx == 1)
 
         if optimizer_idx == 0:
-            return self.generator_step(images, use_ema)
+            return self.generator_step(images)
         elif optimizer_idx == 1:
-            return self.discriminator_step(images, use_ema)
+            return self.discriminator_step(images)
 
     def training_step(
         self, images: torch.Tensor, batch_idx: int, optimizer_idx: int
@@ -132,26 +116,17 @@ class VQGANTrainingModule(LightningModule):
 
     def validation_step(
         self, images: torch.Tensor, batch_idx: int
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         decoded, _, metrics = self(images, optimizer_idx=0)
-        decoded_ema, _, metrics_ema = self(images, optimizer_idx=0, use_ema=True)
         self.log("step", self.global_step)
         self.log_dict({f"val/{k}": v for k, v in metrics.items()})
-        self.log_dict({f"val_ema/{k}": v for k, v in metrics_ema.items()})
-        return images, decoded, decoded_ema
+        return images, decoded
 
-    def validation_epoch_end(
-        self, outputs: list[tuple[torch.Tensor, torch.Tensor, torch.Tensor]]
-    ):
-        images = torch.stack((outputs[0][0], outputs[0][1]), dim=1).flatten(0, 1)
-        images_ema = torch.stack((outputs[0][0], outputs[0][2]), dim=1).flatten(0, 1)
-
+    def validation_epoch_end(self, outputs: list[tuple[torch.Tensor, torch.Tensor]]):
+        images = torch.stack(outputs[0], dim=1).flatten(0, 1)
         nrow = int(images.size(0) ** 0.5) // 2 * 2
         grid = make_grid(images.clamp(-1, 1), nrow, value_range=(-1, 1))
-        grid_ema = make_grid(images_ema.clamp(-1, 1), nrow, value_range=(-1, 1))
-
         self.logger.log_image("val/reconstructed", [grid])
-        self.logger.log_image("val_ema/reconstructed", [grid_ema])
 
     def configure_optimizers(self) -> tuple[dict[str, Any]]:
         generator_params = (
@@ -170,26 +145,6 @@ class VQGANTrainingModule(LightningModule):
             "frequency": self.config.optim.num_discriminator_steps,
         }
         return generator_optimizer, discriminator_optimizer
-
-    @torch.no_grad()
-    def on_before_optimizer_step(self, optimizer: Optimizer, optimizer_idx: int):
-        if optimizer_idx != 0:
-            return
-        decay = 0 if self.current_epoch >= self.model_average_start else self.ema_decay
-
-        for p1, p2 in zip(self.encoder.parameters(), self.encoder_ema.parameters()):
-            p2.copy_(decay * p2.float() + (1 - decay) * p1.float())
-        for p1, p2 in zip(self.decoder.parameters(), self.decoder_ema.parameters()):
-            p2.copy_(decay * p2.float() + (1 - decay) * p1.float())
-        for p1, p2 in zip(self.quantizer.parameters(), self.quantizer_ema.parameters()):
-            p2.copy_(decay * p2.float() + (1 - decay) * p1.float())
-
-        for b1, b2 in zip(self.encoder.buffers(), self.encoder_ema.buffers()):
-            b2.copy_(b1)
-        for b1, b2 in zip(self.decoder.buffers(), self.decoder_ema.buffers()):
-            b2.copy_(b1)
-        for b1, b2 in zip(self.quantizer.buffers(), self.quantizer_ema.buffers()):
-            b2.copy_(b1)
 
     def on_load_checkpoint(self, checkpoint: dict[str, Any]):
         if "ApexMixedPrecisionPlugin" in checkpoint:
