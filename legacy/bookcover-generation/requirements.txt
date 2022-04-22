@@ -1,0 +1,8 @@
+numpy
+omegaconf
+opencv_python_headless
+pandas
+pytorch_lightning
+torch
+torchvision
+wandb
