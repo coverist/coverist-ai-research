@@ -22,7 +22,7 @@ def main(args: argparse.Namespace, config: DictConfig):
     )
 
     tokens_list = []
-    for _, images in zip(range(100), tqdm.tqdm(dataloader)):
+    for images in tqdm.tqdm(dataloader):
         _, quantized_ids, *_ = model.quantizer(model.encoder(images.cuda()))
         quantized_ids = quantized_ids.flatten(1).tolist()
         quantized_ids = [" ".join(map(str, ids)) for ids in quantized_ids]
