@@ -66,7 +66,7 @@ class VQGANTrainingModule(LightningModule):
         loss_perceptual = self.perceptual(images, decoded)
 
         loss_generator, adaptive_weight = 0, 0
-        if self.current_epoch >= self.adversarial_start:
+        if self.training and self.current_epoch >= self.adversarial_start:
             loss_generator = -self.discriminator(decoded).mean()
             adaptive_weight = self.calculate_adaptive_weight(
                 loss_reconstruction + self.perceptual_weight * loss_perceptual,
