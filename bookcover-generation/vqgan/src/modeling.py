@@ -61,7 +61,7 @@ class VQVAEDecoderConfig:
 class VQVAEQuantizerConfig:
     num_embeddings: int = 8192
     embedding_dim: int = 256
-    factorization_dim: int = 16
+    factorized_dim: int = 16
 
 
 @dataclass
@@ -145,9 +145,9 @@ class VQVAEDecoder(nn.Module):
 class VQVAEQuantizer(nn.Module):
     def __init__(self, config: VQVAEQuantizerConfig):
         super().__init__()
-        self.embeddings = nn.Embedding(config.num_embeddings, config.factorization_dim)
-        self.projection = nn.Conv2d(config.embedding_dim, config.factorization_dim, 1)
-        self.expansion = nn.Conv2d(config.factorization_dim, config.embedding_dim, 1)
+        self.embeddings = nn.Embedding(config.num_embeddings, config.factorized_dim)
+        self.projection = nn.Conv2d(config.embedding_dim, config.factorized_dim, 1)
+        self.expansion = nn.Conv2d(config.factorized_dim, config.embedding_dim, 1)
 
     def forward(
         self, encoded: torch.Tensor
