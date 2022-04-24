@@ -37,7 +37,7 @@ optim:
     eps: 1e-6
   criterion:
     perceptual_input_size: [264, 192]
-    perceptual_weight: 1
+    perceptual_weight: 0.1
     quantization_weight: 1
     generator_weight: 0.25
   num_discriminator_steps: 1

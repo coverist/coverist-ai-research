@@ -218,4 +218,8 @@ class OCRPerceptualLoss(nn.Module):
     def forward(self, images: torch.Tensor, decoded: torch.Tensor) -> torch.Tensor:
         images_features = self.forward_features(images)
         decoded_features = self.forward_features(decoded)
-        return sum(map(F.mse_loss, images_features, decoded_features))
+
+        losses = []
+        for images_feature, decoded_feature in zip(images_features, decoded_features):
+            losses.append((images_feature - decoded_feature).square().sum(1).mean())
+        return sum(losses)
