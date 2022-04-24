@@ -1,0 +1,53 @@
+dataset:
+  pattern: ../../resources/kyobobook-images/**/*.jpg
+  image_size: 256
+  validation_ratio: 0.005
+
+model:
+  encoder:
+    num_channels: 3
+    num_layers: [2, 2, 2, 4, 4]
+    hidden_dims: [128, 256, 512, 1024, 2048]
+    middle_reduction: 4
+    embedding_dim: 256
+  decoder:
+    num_channels: 3
+    num_layers: [4, 4, 2, 2, 2]
+    hidden_dims: [2048, 1024, 512, 256, 128]
+    middle_reduction: 4
+    embedding_dim: 256
+  quantizer:
+    num_embeddings: 16384
+    embedding_dim: 256
+    factorized_dim: 16
+  discriminator:
+    num_channels: 3
+    kernel_size: 4
+    hidden_dims: [64, 128, 256]
+    num_head_layers: 2
+
+optim:
+  generator:
+    lr: 8e-5
+    betas: [0.5, 0.9]
+    eps: 1e-6
+  discriminator:
+    lr: 8e-5
+    betas: [0.5, 0.9]
+    eps: 1e-6
+  criterion:
+    perceptual_input_size: [264, 192]
+    perceptual_weight: 1
+    quantization_weight: 1
+    generator_weight: 0.5
+  num_discriminator_steps: 1
+  adversarial_start: 0
+
+train:
+  name: vqgan-256-8192
+  epochs: 20
+  batch_size: 16
+  accumulate_grads: 1
+  validation_interval: 1
+  precision: 16
+  gpus: 1
