@@ -44,7 +44,7 @@ optim:
   adversarial_start: 0
 
 train:
-  name: vqgan-256-8192
+  name: vqgan-improved-256-16384
   epochs: 20
   batch_size: 16
   accumulate_grads: 1
