@@ -154,25 +154,26 @@ class VQGANTrainingModule(LightningModule):
         )
         discriminator_params = self.discriminator.parameters()
 
+        generator_optimizer = Adam(generator_params, **self.config.optim.generator)
+        discriminator_optimizer = Adam(
+            discriminator_params, **self.config.optim.discriminator
+        )
+
         generator_optimizer = {
-            "optimizer": Adam(generator_params, **self.config.optim.generator),
+            "optimizer": generator_optimizer,
             "frequency": 1,
+            "scheduler": CosineAnnealingLR(
+                generator_optimizer, self.config.train.epochs
+            ),
         }
         discriminator_optimizer = {
-            "optimizer": Adam(discriminator_params, **self.config.optim.discriminator),
+            "optimizer": discriminator_optimizer,
             "frequency": self.config.optim.num_discriminator_steps,
+            "scheduler": CosineAnnealingLR(
+                discriminator_optimizer, self.config.train.epochs
+            ),
         }
-
-        generator_scheduler = CosineAnnealingLR(
-            generator_optimizer["optimizer"], self.config.train.epochs
-        )
-        discriminator_scheduler = CosineAnnealingLR(
-            discriminator_optimizer["optimizer"], self.config.train.epochs
-        )
-        return (
-            [generator_optimizer, discriminator_optimizer],
-            [generator_scheduler, discriminator_scheduler],
-        )
+        return generator_optimizer, discriminator_optimizer
 
     def on_load_checkpoint(self, checkpoint: dict[str, Any]):
         if "ApexMixedPrecisionPlugin" in checkpoint:
