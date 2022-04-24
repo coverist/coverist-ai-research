@@ -24,7 +24,7 @@ model:
     num_channels: 3
     kernel_size: 4
     hidden_dims: [64, 128, 256]
-    num_head_layers: 2
+    num_head_layers: 3
 
 optim:
   generator:
