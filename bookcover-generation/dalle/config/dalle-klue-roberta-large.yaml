@@ -38,7 +38,7 @@ optim:
 
 train:
   name: dalle-klue-roberta-large
-  batch_size: 256
+  batch_size: 192
   accumulate_grads: 1
   max_grad_norm: 1.0
   gradient_checkpointing: false
