@@ -55,25 +55,21 @@ class DALLETrainingModule(LightningModule):
         return batch
 
     def validation_epoch_end(self, batch_list: list[dict[str, torch.Tensor]]):
-        images, captions = [], []
-        for batch in batch_list[: self.num_gen_batches]:
-            generated_ids = self.model.generate(
-                batch["input_ids"],
-                attention_mask=batch["attention_mask"],
-                **self.config.model.generation
-            )
-            generated_ids = generated_ids[:, 1:]
-            generated_ids = generated_ids.view(
-                generated_ids.size(0), int(generated_ids.size(1) ** 0.5), -1
-            )
+        outputs = self.model.generate(
+            batch_list[0]["input_ids"],
+            attention_mask=batch_list[0]["attention_mask"],
+            **self.config.model.generation
+        )
+        outputs = outputs[:, 1:].view(outputs.size(0), int(outputs.size(1) ** 0.5), -1)
 
-            images.extend(list(self.vqgan(generated_ids)))
-            captions.extend(batch["input_ids"].tolist())
+        images = []
+        for i in range(0, outputs.size(0), 16):
+            images.extend(self.vqgan(outputs[i * 16 : (i + 1) * 16]))
 
         self.logger.log_image(
             "val/generated",
             images=images,
-            caption=self.tokenizer.batch_decode(captions, True),
+            caption=self.tokenizer.batch_decode(batch_list[0]["input_ids"], True),
         )
 
     def get_parameter_groups(self) -> list[dict[str, Any]]:
