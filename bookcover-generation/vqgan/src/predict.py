@@ -39,7 +39,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("config")
     parser.add_argument("--input", default="../../resources/kyobobook-images/**/*.jpg")
-    parser.add_argument("--output", default="encoded.csv")
+    parser.add_argument("--output", default="kyobobook-quantized.csv")
     parser.add_argument("--image-size", type=int, default=256)
     parser.add_argument("--batch-size", type=int, default=128)
     parser.add_argument("--checkpoint", default="last.ckpt")
