@@ -63,7 +63,7 @@ class DALLETrainingModule(LightningModule):
 
         images = []
         for i in range(0, outputs.size(0), 16):
-            images.extend(self.vqgan(outputs[i * 16 : (i + 1) * 16]))
+            images.extend(self.vqgan(outputs[i : i + 16]))
 
         self.logger.log_image(
             "val/generated",
