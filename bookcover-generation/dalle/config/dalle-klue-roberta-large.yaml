@@ -1,0 +1,49 @@
+dataset:
+  text_dataset: ../../resources/kyobobook-dataset.jsonl
+  image_dataset: ../../resources/kyobobook-quantized.csv
+  validation_ratio: 0.001
+  prompt_max_length: 64
+  image_vocab_size: 8192
+
+model:
+  vqgan: vqgan-decoder.pth
+  encoder: klue/roberta-large
+  decoder:
+    add_cross_attention: true
+    activation_function: gelu
+    bos_token_id: 8192
+    eos_token_id: 8192
+    initializer_range: 0.02
+    n_embd: 512
+    n_head: 8
+    n_layer: 6
+    vocab_size: 8193
+  generation:
+    max_length: 257
+    min_length: 257
+    do_sample: true
+    temperature: 1.0
+    top_k: 50
+
+optim:
+  optimizer:
+    lr: 1e-4
+    betas: [0.9, 0.999]
+    eps: 1e-6
+    weight_decay: 0.01
+  scheduler:
+    name: linear
+    num_warmup_steps: 10000
+    num_training_steps: 100000
+
+train:
+  name: dalle-klue-roberta-large
+  batch_size: 8
+  accumulate_grads: 1
+  num_gen_batches: 4
+  max_grad_norm: 1.0
+  gradient_checkpointing: false
+  validation_interval: 0.1
+  logging_interval: 10
+  precision: 16
+  gpus: 1
