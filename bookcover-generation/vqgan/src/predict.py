@@ -14,7 +14,7 @@ from lightning import VQGANTrainingModule
 @torch.no_grad()
 def main(args: argparse.Namespace, config: DictConfig):
     model = VQGANTrainingModule.load_from_checkpoint(args.checkpoint, config=config)
-    model.cuda().eval()
+    model.cuda().eval().type(torch.float16 if args.use_fp16 else torch.float32)
 
     dataset = RecursiveImageDataset(args.input, args.image_size)
     dataloader = DataLoader(
@@ -23,7 +23,9 @@ def main(args: argparse.Namespace, config: DictConfig):
 
     tokens_list = []
     for images in tqdm.tqdm(dataloader):
-        _, quantized_ids, *_ = model.quantizer(model.encoder(images.cuda()))
+        images = images.cuda().type(torch.float16 if args.use_fp16 else torch.float32)
+        _, quantized_ids, *_ = model.quantizer(model.encoder(images))
+
         quantized_ids = quantized_ids.flatten(1).tolist()
         quantized_ids = [" ".join(map(str, ids)) for ids in quantized_ids]
         tokens_list.extend(quantized_ids)
@@ -43,6 +45,7 @@ if __name__ == "__main__":
     parser.add_argument("--image-size", type=int, default=256)
     parser.add_argument("--batch-size", type=int, default=128)
     parser.add_argument("--checkpoint", default="last.ckpt")
+    parser.add_argument("--use-fp16", action="store_true", default=False)
     args, unknown_args = parser.parse_known_args()
 
     config = OmegaConf.load(args.config)
