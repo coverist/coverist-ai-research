@@ -30,7 +30,6 @@ class DALLETrainingModule(LightningModule):
     def __init__(self, config: DictConfig):
         super().__init__()
         self.config = config
-        self.num_gen_batches = config.train.num_gen_batches
 
         self.model = EncoderDecoderModel.from_encoder_decoder_pretrained(
             config.model.encoder,
