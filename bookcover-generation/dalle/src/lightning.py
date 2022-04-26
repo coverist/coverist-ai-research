@@ -66,7 +66,7 @@ class DALLETrainingModule(LightningModule):
         self.logger.log_image(
             "val/generated",
             images=list(self.vqgan(outputs)),
-            caption=self.tokenizer.batch_decode(batch_list[0]["input_ids"], True),
+            caption=self.tokenizer.batch_decode(batch_list[0]["input_ids"][:64], True),
         )
 
     def get_parameter_groups(self) -> list[dict[str, Any]]:
