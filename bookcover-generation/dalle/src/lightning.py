@@ -57,19 +57,15 @@ class DALLETrainingModule(LightningModule):
 
     def validation_epoch_end(self, batch_list: list[dict[str, torch.Tensor]]):
         outputs = self.model.generate(
-            batch_list[0]["input_ids"],
-            attention_mask=batch_list[0]["attention_mask"],
+            batch_list[0]["input_ids"][:64],
+            attention_mask=batch_list[0]["attention_mask"][:64],
             **self.config.model.generation
         )
         outputs = outputs[:, 1:].view(outputs.size(0), int(outputs.size(1) ** 0.5), -1)
 
-        images = []
-        for i in range(0, outputs.size(0), 64):
-            images.extend(self.vqgan(outputs[i : i + 64]))
-
         self.logger.log_image(
             "val/generated",
-            images=images,
+            images=list(self.vqgan(outputs)),
             caption=self.tokenizer.batch_decode(batch_list[0]["input_ids"], True),
         )
 
@@ -136,6 +132,7 @@ class DALLETrainingDataModule(LightningDataModule):
         return DataLoader(
             self.val_dataset,
             self.config.train.batch_size,
+            shuffle=True,
             num_workers=os.cpu_count(),
             collate_fn=self.collator,
             persistent_workers=True,
