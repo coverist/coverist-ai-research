@@ -26,7 +26,7 @@ class DALLEBookDataset(Dataset):
             "출판사: " + book_row.publisher,
             "카테고리: " + book_row.category,
         ]
-        book_prompt = " \\ ".join(book_prompt)
+        book_prompt = f" {self.tokenizer.unk_token} ".join(book_prompt)
 
         batch = self.tokenizer(book_prompt, truncation=True, max_length=self.max_length)
         batch["labels"] = list(map(int, image_row.tokens.split()))
