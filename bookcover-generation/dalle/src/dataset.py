@@ -21,14 +21,13 @@ class DALLEBookDataset(Dataset):
         image_row = self.images.loc[book_row.isbn]
 
         book_prompt = [
-            book_row.title,
-            book_row.author,
-            book_row.publisher,
-            book_row.category,
+            "제목: " + book_row.title,
+            "저자: " + book_row.author,
+            "출판사: " + book_row.publisher,
+            "카테고리: " + book_row.category,
         ]
-        book_prompt = " @ ".join(book_prompt)
-        image_tokens = list(map(int, image_row.tokens.split()))
+        book_prompt = " \\ ".join(book_prompt)
 
         batch = self.tokenizer(book_prompt, truncation=True, max_length=self.max_length)
-        batch["labels"] = [self.image_vocab_size] + image_tokens
+        batch["labels"] = list(map(int, image_row.tokens.split()))
         return batch

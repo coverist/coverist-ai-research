@@ -36,7 +36,9 @@ class DALLETrainingModule(LightningModule):
             decoder_model=GPT2LMHeadModel(GPT2Config(**config.model.decoder)),
         )
         self.model.config.decoder_start_token_id = config.model.decoder.bos_token_id
+        self.model.config.eos_token_id = config.model.decoder.eos_token_id
         self.model.config.pad_token_id = config.model.decoder.bos_token_id
+        self.model.config.vocab_size = config.model.decoder.vocab_size
 
         self.vqgan = VQVAEDecoder.from_pretrained(config.model.vqgan)
         self.tokenizer = AutoTokenizer.from_pretrained(config.model.encoder)
@@ -59,11 +61,11 @@ class DALLETrainingModule(LightningModule):
             attention_mask=batch_list[0]["attention_mask"],
             **self.config.model.generation
         )
-        outputs = outputs[:, 1:].view(outputs.size(0), int(outputs.size(1) ** 0.5), -1)
+        outputs = outputs.view(outputs.size(0), int(outputs.size(1) ** 0.5), -1)
 
         images = []
-        for i in range(0, outputs.size(0), 16):
-            images.extend(self.vqgan(outputs[i : i + 16]))
+        for i in range(0, outputs.size(0), 64):
+            images.extend(self.vqgan(outputs[i : i + 64]))
 
         self.logger.log_image(
             "val/generated",

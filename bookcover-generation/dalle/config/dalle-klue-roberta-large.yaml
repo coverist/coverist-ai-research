@@ -19,11 +19,11 @@ model:
     n_layer: 12
     vocab_size: 8193
   generation:
-    max_length: 257
-    min_length: 257
+    max_length: 256
+    min_length: 256
     do_sample: true
     temperature: 1.0
-    top_k: 10
+    top_k: 50
 
 optim:
   optimizer:
