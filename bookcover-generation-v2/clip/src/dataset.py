@@ -75,7 +75,8 @@ class BookCoverPairedDataset(Dataset):
         self, example: pd.Series, negative: bool = False
     ) -> dict[str, Any]:
         queries = [example.title, example.author, example.publisher]
-        negative_queries, target_index = queries.copy(), random.randint(0, len(queries))
+        negative_queries = queries.copy()
+        target_index = random.randint(0, len(queries) - 1)
 
         # Create new negative sample which has different query from the original one.
         # Note that if `negative=False` then nothing will be replaced.
@@ -94,7 +95,7 @@ class BookCoverPairedDataset(Dataset):
         example = self.dataset.iloc[index]
         image = self.read_image_and_transform(example)
         if image is None:
-            return self[random.randint(0, len(self))]
+            return self[random.randint(0, len(self) - 1)]
 
         # Create one positive text sample and several negative samples. All samples will
         # be merged and compared with the images.
