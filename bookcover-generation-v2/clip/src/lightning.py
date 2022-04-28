@@ -11,7 +11,11 @@ from pytorch_lightning import LightningDataModule, LightningModule
 from sklearn.model_selection import train_test_split
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
-from transformers import AutoModel, AutoTokenizer, get_scheduler
+from transformers import (
+    AutoModelForSequenceClassification,
+    AutoTokenizer,
+    get_scheduler,
+)
 
 from dataset import BookCoverPairedDataset, CLIPTransform, DataCollatorForImageTextPair
 
@@ -26,18 +30,19 @@ class CLIPTrainingModule(LightningModule):
         super().__init__()
         self.config = config
         self.image_encoder = timm.create_model(
-            config.model.image_encoder, pretrained=True, num_classes=0
+            config.model.image_encoder,
+            pretrained=True,
+            num_classes=config.model.embedding_dim,
         )
-        self.image_projection = nn.Linear(
-            self.image_encoder.num_features,
-            config.model.embedding_dim,
-        )
-        self.text_encoder = AutoModel.from_pretrained(config.model.text_encoder)
-        self.text_projection = nn.Linear(
-            self.text_encoder.config.hidden_size,
-            config.model.embedding_dim,
+        self.text_encoder = AutoModelForSequenceClassification.from_pretrained(
+            config.model.text_encoder,
+            num_labels=config.model.embedding_dim,
         )
         self.temperature = nn.Parameter(torch.tensor(2.6593))
+
+        if config.train.use_gradient_checkpoint:
+            self.image_encoder.set_grad_checkpointing(True)
+            self.text_encoder.gradient_checkpointing_enable()
 
     def forward(
         self,
@@ -45,11 +50,8 @@ class CLIPTrainingModule(LightningModule):
         input_texts: dict[str, torch.Tensor],
     ) -> tuple[torch.Tensor, torch.Tensor]:
         # Get image embeddings and text embeddings to calculate cosine similarity.
-        image_features = self.image_projection(self.image_encoder(input_images))
-        image_features = F.normalize(image_features, eps=1e-6)
-
-        text_features = self.text_projection(self.text_encoder(**input_texts)[0][:, 0])
-        text_features = F.normalize(text_features, eps=1e-6)
+        image_features = F.normalize(self.image_encoder(input_images), eps=1e-6)
+        text_features = F.normalize(self.text_encoder(**input_texts), eps=1e-6)
 
         # Calculate the cosine similarity and scale the logits.
         logits = torch.matmul(image_features, text_features.transpose(0, 1))

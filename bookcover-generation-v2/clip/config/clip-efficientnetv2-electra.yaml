@@ -27,3 +27,4 @@ train:
   accumulate_grad_batches: 1
   gradient_clip_val: 1.0
   validation_interval: 1.0
+  use_gradient_checkpoint: true
