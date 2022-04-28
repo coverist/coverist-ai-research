@@ -10,6 +10,7 @@ import torch
 from albumentations.pytorch import ToTensorV2
 from torch.utils.data import Dataset
 from transformers import DataCollatorWithPadding, PreTrainedTokenizerBase
+from turbojpeg import TJCS_RGB, TurboJPEG
 
 
 class CLIPTransform(A.Compose):
@@ -51,21 +52,20 @@ class BookCoverPairedDataset(Dataset):
     transform: Callable
     tokenizer: PreTrainedTokenizerBase
 
+    def __post_init__(self):
+        self.turbojpeg = TurboJPEG()
+
     def __len__(self) -> int:
         return len(self.dataset)
 
     def __getitem__(self, index: int) -> tuple[torch.Tensor, dict[str, Any]]:
         example = self.dataset.iloc[index]
 
-        # Read the book-cover image and return other example if the image is invalid.
+        # Read the book-cover image and apply augmentations.
         path = os.path.join(self.image_dir, *example.isbn[-3:], f"{example.isbn}.jpg")
-        image = cv2.imread(path)
-        if image is None:
-            return self[random.randint(0, len(self))]
-
-        # Change the color format of the image and apply image augmentations.
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        image = self.transform(image=image)["image"]
+        with open(path, "rb") as fp:
+            image = self.turbojpeg.decode(fp.read(), pixel_format=TJCS_RGB)
+            image = self.transform(image=image)["image"]
 
         # Create the text query prompt and tokenize with truncation.
         text_queries = [example.title, example.author, example.publisher]
