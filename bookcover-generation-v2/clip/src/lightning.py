@@ -76,8 +76,8 @@ class CLIPTrainingModule(LightningModule):
         self.log("step", self.global_step)
 
     def get_parameter_groups(self) -> list[dict[str, Any]]:
-        do_decay = [p for p in self.model.parameters() if p.ndim < 2]
-        no_decay = [p for p in self.model.parameters() if p.ndim >= 2]
+        do_decay = [p for p in self.parameters() if p.ndim < 2]
+        no_decay = [p for p in self.parameters() if p.ndim >= 2]
         return [{"params": do_decay}, {"params": no_decay, "weight_decay": 0.0}]
 
     def configure_optimizers(self) -> tuple[list[Optimizer], list[dict[str, Any]]]:
@@ -98,7 +98,7 @@ class CLIPDataModule(LightningDataModule):
     def setup(self, stage: Optional[str] = None):
         tokenizer = AutoTokenizer.from_pretrained(self.config.model.text_encoder)
 
-        dataset = pd.read_json(self.config.data.dataset, lines=True, dtype=None)
+        dataset = pd.read_json(self.config.data.dataset, lines=True, dtype=False)
         dataset = dataset[dataset.with_cover]
         dataset = dataset[dataset.cover_aspect_ratio > 0.5]
         dataset = dataset[dataset.cover_aspect_ratio < 0.9]

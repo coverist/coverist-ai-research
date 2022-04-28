@@ -22,7 +22,7 @@ def main(
     trainer = Trainer(
         gpus=1,
         precision=16,
-        amp_backend="apex",
+        amp_backend="native",
         log_every_n_steps=50,
         max_steps=config.optim.scheduler.num_training_steps,
         gradient_clip_val=config.train.gradient_clip_val,

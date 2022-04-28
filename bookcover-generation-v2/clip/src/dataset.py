@@ -58,7 +58,7 @@ class BookCoverPairedDataset(Dataset):
         example = self.dataset.iloc[index]
 
         # Read the book-cover image and return other example if the image is invalid.
-        path = os.path.join(self.image_dir, *example.isbn[-3], f"{example.isbn}.jpg")
+        path = os.path.join(self.image_dir, *example.isbn[-3:], f"{example.isbn}.jpg")
         image = cv2.imread(path)
         if image is None:
             return self[random.randint(0, len(self))]
@@ -83,6 +83,6 @@ class DataCollatorForImageTextPair(DataCollatorWithPadding):
         self, features: list[tuple[torch.Tensor, dict[str, Any]]]
     ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         images = [feature[0] for feature in features]
-        encodings = [features[1] for feature in features]
+        encodings = [feature[1] for feature in features]
 
         return torch.stack(images), super().__call__(encodings)
