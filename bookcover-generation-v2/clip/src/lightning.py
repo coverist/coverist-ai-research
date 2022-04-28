@@ -134,7 +134,6 @@ class CLIPDataModule(LightningDataModule):
             shuffle=True,
             num_workers=os.cpu_count(),
             collate_fn=self.collator,
-            pin_memory=True,
             persistent_workers=True,
         )
 
@@ -144,6 +143,5 @@ class CLIPDataModule(LightningDataModule):
             batch_size=self.config.train.batch_size,
             num_workers=os.cpu_count(),
             collate_fn=self.collator,
-            pin_memory=True,
             persistent_workers=True,
         )
