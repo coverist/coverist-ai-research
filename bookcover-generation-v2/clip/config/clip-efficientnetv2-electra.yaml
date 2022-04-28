@@ -1,7 +1,7 @@
 data:
   dataset: ../../resources/kyobobook-dataset.jsonl
   image_dir: ../../resources/kyobobook-images
-  image_size: 384
+  image_size: 224
   max_length: 64
   validation_ratio: 0.01
 
