@@ -81,7 +81,7 @@ class BookCoverPairedDataset(Dataset):
         # Create new negative sample which has different query from the original one.
         # Note that if `negative=False` then nothing will be replaced.
         while negative and negative_queries[target_index] == queries[target_index]:
-            alternatvie = self.dataset.sample(1).iloc[0]
+            alternatvie = self.dataset.iloc[random.randint(0, len(self.dataset) - 1)]
             alternatvie = [alternatvie.title, alternatvie.author, alternatvie.publisher]
             negative_queries[target_index] = alternatvie[target_index]
 
