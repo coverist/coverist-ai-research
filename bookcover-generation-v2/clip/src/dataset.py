@@ -63,9 +63,13 @@ class BookCoverPairedDataset(Dataset):
 
         # Read the book-cover image and apply augmentations.
         path = os.path.join(self.image_dir, *example.isbn[-3:], f"{example.isbn}.jpg")
-        with open(path, "rb") as fp:
-            image = self.turbojpeg.decode(fp.read(), pixel_format=TJCS_RGB)
-            image = self.transform(image=image)["image"]
+        try:
+            with open(path, "rb") as fp:
+                image = self.turbojpeg.decode(fp.read(), pixel_format=TJCS_RGB)
+                image = self.transform(image=image)["image"]
+        except OSError:
+            print("error occured!")
+            return self[random.randint(0, len(self))]
 
         # Create the text query prompt and tokenize with truncation.
         text_queries = [example.title, example.author, example.publisher]
