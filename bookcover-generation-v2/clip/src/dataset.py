@@ -88,4 +88,4 @@ class DataCollatorForImageTextPair(DataCollatorWithPadding):
         images = [feature[0] for feature in features]
         encodings = [feature[1] for feature in features]
 
-        return torch.stack(images), super().__call__(encodings)
+        return torch.stack(images), dict(super().__call__(encodings))
