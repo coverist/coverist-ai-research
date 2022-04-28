@@ -51,7 +51,7 @@ class CLIPTrainingModule(LightningModule):
     ) -> tuple[torch.Tensor, torch.Tensor]:
         # Get image embeddings and text embeddings to calculate cosine similarity.
         image_features = F.normalize(self.image_encoder(input_images), eps=1e-6)
-        text_features = F.normalize(self.text_encoder(**input_texts), eps=1e-6)
+        text_features = F.normalize(self.text_encoder(**input_texts)[0], eps=1e-6)
 
         # Calculate the cosine similarity and scale the logits.
         logits = torch.matmul(image_features, text_features.transpose(0, 1))
