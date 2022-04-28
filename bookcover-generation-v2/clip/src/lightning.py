@@ -41,7 +41,7 @@ class CLIPTrainingModule(LightningModule):
         self.temperature = nn.Parameter(torch.tensor(2.6593))
 
         if config.train.use_gradient_checkpoint:
-            self.image_encoder.set_grad_checkpointing(True)
+            self.image_encoder.set_grad_checkpointing()
             self.text_encoder.gradient_checkpointing_enable()
 
     def forward(
