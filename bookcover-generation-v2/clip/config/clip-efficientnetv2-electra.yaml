@@ -6,7 +6,7 @@ data:
   validation_ratio: 0.01
 
 model:
-  image_encoder: tf_efficientnetv2_s
+  image_encoder: tf_efficientnetv2_s_in21ft1k
   text_encoder: monologg/koelectra-base-v3-discriminator
   embedding_dim: 1024
 
