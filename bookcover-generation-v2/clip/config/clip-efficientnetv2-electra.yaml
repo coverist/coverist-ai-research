@@ -24,7 +24,7 @@ optim:
 
 train:
   name: clip-efficientnetv2-electra
-  batch_size: 512
+  batch_size: 768
   accumulate_grad_batches: 1
   gradient_clip_val: 0.0
   validation_interval: 1.0
