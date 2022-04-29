@@ -1,8 +1,9 @@
 data:
   dataset: ../../resources/kyobobook-dataset.jsonl
   image_dir: ../../resources/kyobobook-images
-  image_size: 224
+  image_size: 384
   max_length: 64
+  negative_samples: 7
   validation_ratio: 0.01
 
 model:
@@ -19,11 +20,11 @@ optim:
   scheduler:
     name: cosine
     num_warmup_steps: 1000
-    num_training_steps: 50000
+    num_training_steps: 30000
 
 train:
   name: clip-efficientnetv2-electra
-  batch_size: 2048
+  batch_size: 512
   accumulate_grad_batches: 1
   gradient_clip_val: 0.0
   validation_interval: 1.0

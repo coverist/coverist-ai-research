@@ -51,16 +51,21 @@ class BookCoverPairedDataset(Dataset):
         dataset: pd.DataFrame,
         image_dir: str,
         max_length: int,
-        negative_samples: int,
+        drop_prob: float,
         transform: Callable,
         tokenizer: PreTrainedTokenizerBase,
     ):
+        # It is observed that `pd.DataFrame` is really slower than `np.array`. Thus we
+        # convert the dataframe to numpy array to reduce the bottleneck.
         self.dataset = dataset.to_numpy()
         self.image_dir = image_dir
         self.max_length = max_length
-        self.negative_samples = negative_samples
+        self.drop_prob = drop_prob
         self.transform = transform
         self.tokenizer = tokenizer
+
+        # Instead of using `cv2.imread`, we use `TurboJPEG` of `libturbo-jpeg` to
+        # improve image decoding performance.
         self.turbojpeg = TurboJPEG()
 
     def __len__(self) -> int:
@@ -78,39 +83,35 @@ class BookCoverPairedDataset(Dataset):
             # invalid image.
             return None
 
-    def create_text_encoding(
-        self, example: np.ndarray, negative: bool = False
-    ) -> dict[str, Any]:
-        queries = [example[0], example[2], example[4]]
-        negative_queries = queries.copy()
-        target_index = random.randint(0, len(queries) - 1)
+    def create_text_encoding(self, example: np.ndarray) -> dict[str, Any]:
+        text_queries = [
+            f"제목: {example[0]}",
+            f"저자: {example[2]}",
+            f"출판사: {example[4]}",
+        ]
+        if self.drop_prob > 0:
+            random.shuffle(text_queries)
 
-        # Create new negative sample which has different query from the original one.
-        # Note that if `negative=False` then nothing will be replaced.
-        while negative and negative_queries[target_index] == queries[target_index]:
-            alternatvie = self.dataset[random.randint(0, len(self.dataset) - 1)]
-            alternatvie = [alternatvie[0], alternatvie[2], alternatvie[4]]
-            negative_queries[target_index] = alternatvie[target_index]
+        # Drop the queries randomly to make the model to see different combinations.
+        for i in reversed(range(len(text_queries))):
+            if len(text_queries) > 1 and random.random() < self.drop_prob:
+                text_queries = text_queries[:i] + text_queries[i + 1 :]
 
         return self.tokenizer(
-            f" {self.tokenizer.sep_token} ".join(negative_queries),
+            " ___ ".join(text_queries),
             truncation=True,
             max_length=self.max_length,
         )
 
-    def __getitem__(self, index: int) -> tuple[torch.Tensor, list[dict[str, Any]]]:
+    def __getitem__(self, index: int) -> tuple[torch.Tensor, dict[str, Any]]:
         example = self.dataset[index]
         image = self.read_image_and_transform(example)
-        if image is None:
-            return self[random.randint(0, len(self) - 1)]
+        encoding = self.create_text_encoding(example)
 
-        # Create one positive text sample and several negative samples. All samples will
-        # be merged and compared with the images.
-        text_encodings = [
-            self.create_text_encoding(example, negative=i > 0)
-            for i in range(1 + self.negative_samples)
-        ]
-        return image, text_encodings
+        if image is None:
+            # If the image is invalid, randomly selected other sample will be returned.
+            return self[random.randint(0, len(self) - 1)]
+        return image, encoding
 
 
 @dataclass
@@ -119,6 +120,6 @@ class DataCollatorForImageTextPair(DataCollatorWithPadding):
         self, features: list[tuple[torch.Tensor, dict[str, Any]]]
     ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         images = [feature[0] for feature in features]
-        encodings = [encoding for feature in features for encoding in feature[1]]
+        encodings = [feature[1] for feature in features]
 
         return torch.stack(images), dict(super().__call__(encodings))

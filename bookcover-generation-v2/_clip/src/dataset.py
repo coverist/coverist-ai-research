@@ -1,10 +1,11 @@
 import os
 import random
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
 import albumentations as A
 import cv2
+import numpy as np
 import pandas as pd
 import torch
 from albumentations.pytorch import ToTensorV2
@@ -44,40 +45,72 @@ class CLIPTransform(A.Compose):
         super().__init__(transforms)
 
 
-@dataclass
 class BookCoverPairedDataset(Dataset):
-    dataset: pd.DataFrame
-    image_dir: str
-    max_length: int
-    transform: Callable
-    tokenizer: PreTrainedTokenizerBase
-
-    def __post_init__(self):
+    def __init__(
+        self,
+        dataset: pd.DataFrame,
+        image_dir: str,
+        max_length: int,
+        negative_samples: int,
+        transform: Callable,
+        tokenizer: PreTrainedTokenizerBase,
+    ):
+        self.dataset = dataset.to_numpy()
+        self.image_dir = image_dir
+        self.max_length = max_length
+        self.negative_samples = negative_samples
+        self.transform = transform
+        self.tokenizer = tokenizer
         self.turbojpeg = TurboJPEG()
 
     def __len__(self) -> int:
         return len(self.dataset)
 
-    def __getitem__(self, index: int) -> tuple[torch.Tensor, dict[str, Any]]:
-        example = self.dataset.iloc[index]
-        path = os.path.join(self.image_dir, *example.isbn[-3:], f"{example.isbn}.jpg")
-
-        # Read the book-cover image and apply augmentations.
+    def read_image_and_transform(self, example: np.ndarray) -> Optional[torch.Tensor]:
+        path = os.path.join(self.image_dir, *example[6][-3:], f"{example[6]}.jpg")
         try:
             with open(path, "rb") as fp:
                 image = self.turbojpeg.decode(fp.read(), pixel_format=TJCS_RGB)
-                image = self.transform(image=image)["image"]
+                return self.transform(image=image)["image"]
         except OSError:
-            return self[random.randint(0, len(self))]
+            # Sometimes when the image is truncated, turbojpeg will throw `OSError`.
+            # This function will return `None` to notify that the current example has
+            # invalid image.
+            return None
 
-        # Create the text query prompt and tokenize with truncation.
-        text_queries = [example.title, example.author, example.publisher]
-        text_encoding = self.tokenizer(
-            f" {self.tokenizer.sep_token} ".join(text_queries),
+    def create_text_encoding(
+        self, example: np.ndarray, negative: bool = False
+    ) -> dict[str, Any]:
+        queries = [example[0], example[2], example[4]]
+        negative_queries = queries.copy()
+        target_index = random.randint(0, len(queries) - 1)
+
+        # Create new negative sample which has different query from the original one.
+        # Note that if `negative=False` then nothing will be replaced.
+        while negative and negative_queries[target_index] == queries[target_index]:
+            alternatvie = self.dataset[random.randint(0, len(self.dataset) - 1)]
+            alternatvie = [alternatvie[0], alternatvie[2], alternatvie[4]]
+            negative_queries[target_index] = alternatvie[target_index]
+
+        return self.tokenizer(
+            f" {self.tokenizer.sep_token} ".join(negative_queries),
             truncation=True,
             max_length=self.max_length,
         )
-        return image, text_encoding
+
+    def __getitem__(self, index: int) -> tuple[torch.Tensor, list[dict[str, Any]]]:
+        example = self.dataset[index]
+        image = self.read_image_and_transform(example)
+        if image is None:
+            return self[random.randint(0, len(self) - 1)]
+
+        # Create one positive text sample and several negative samples. All samples will
+        # be merged and compared with the images.
+        text_encodings = [
+            self.create_text_encoding(example, negative=i > 0)
+            for i in range(1 + self.negative_samples)
+        ]
+        return image, text_encodings
 
 
 @dataclass
@@ -86,6 +119,6 @@ class DataCollatorForImageTextPair(DataCollatorWithPadding):
         self, features: list[tuple[torch.Tensor, dict[str, Any]]]
     ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         images = [feature[0] for feature in features]
-        encodings = [feature[1] for feature in features]
+        encodings = [encoding for feature in features for encoding in feature[1]]
 
         return torch.stack(images), dict(super().__call__(encodings))

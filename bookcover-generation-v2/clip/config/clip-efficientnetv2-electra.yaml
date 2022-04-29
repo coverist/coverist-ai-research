@@ -3,7 +3,7 @@ data:
   image_dir: ../../resources/kyobobook-images
   image_size: 384
   max_length: 64
-  negative_samples: 7
+  drop_prob: 0.1
   validation_ratio: 0.01
 
 model:
