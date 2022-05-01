@@ -1,5 +1,5 @@
 import math
-from typing import Any
+from typing import Any, Optional
 
 import torch
 import torch.nn.functional as F
@@ -25,6 +25,8 @@ class VQGANTrainingModule(LightningModule):
     def __init__(self, config: DictConfig):
         super().__init__()
         self.config = config
+        self.num_log_batches = math.ceil(64 / self.config.train.batch_size)
+
         self.perceptual_loss_weight = config.optim.criterion.perceptual
         self.quantization_loss_weight = config.optim.criterion.quantization
         self.adversarial_loss_weight = config.optim.criterion.adversarial
@@ -128,17 +130,22 @@ class VQGANTrainingModule(LightningModule):
 
     def validation_step(
         self, images: torch.Tensor, batch_idx: int
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[Optional[torch.Tensor], Optional[torch.Tensor]]:
         decodings, _, metrics = self(images, optimizer_idx=0)
         self.log("step", self.global_step)
         self.log_dict({f"val/{k}": v for k, v in metrics.items()})
-        return images, decodings
 
-    def validation_epoch_end(self, outputs: list[tuple[torch.Tensor, torch.Tensor]]):
+        if batch_idx < self.num_log_batches:
+            return images, decodings
+        return None, None
+
+    def validation_epoch_end(
+        self, outputs: list[tuple[Optional[torch.Tensor], Optional[torch.Tensor]]]
+    ):
         # Get 64 original and reconstructed images.
-        num_batches = math.ceil(64 / self.config.train.batch_size)
-        images = torch.cat([output[0] for output in outputs[:num_batches]])[:64]
-        decodings = torch.cat([output[1] for output in outputs[:num_batches]])[:64]
+        outputs = [output for output in outputs if output[0] is not None]
+        images = torch.cat([output[0] for output in outputs])[:64]
+        decodings = torch.cat([output[1] for output in outputs])[:64]
 
         # Stack the original and reconstructed images, make a grid, and log the image.
         grid = torch.stack((images, decodings), dim=1).flatten(0, 1)
