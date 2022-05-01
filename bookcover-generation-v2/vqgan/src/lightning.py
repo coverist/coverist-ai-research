@@ -1,3 +1,4 @@
+import math
 from typing import Any
 
 import torch
@@ -135,7 +136,7 @@ class VQGANTrainingModule(LightningModule):
 
     def validation_epoch_end(self, outputs: list[tuple[torch.Tensor, torch.Tensor]]):
         # Get 64 original and reconstructed images.
-        num_batches = (64 + self.train.batch_size - 1) // self.train.batch_size
+        num_batches = math.ceil(64 / self.config.train.batch_size)
         images = torch.cat([output[0] for output in outputs[:num_batches]])[:64]
         decodings = torch.cat([output[1] for output in outputs[:num_batches]])[:64]
 
