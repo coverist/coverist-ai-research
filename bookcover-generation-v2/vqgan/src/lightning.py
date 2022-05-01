@@ -43,7 +43,7 @@ class VQGANTrainingModule(LightningModule):
         if not self.training:
             return 0
 
-        last_layer = self.decoder.head.parametrizations.weight
+        last_layer = self.decoder.head.parametrizations.weight.original
         grad_cnt = torch.autograd.grad(content, last_layer, retain_graph=True)[0]
         grad_adv = torch.autograd.grad(adversarial, last_layer, retain_graph=True)[0]
         return (grad_cnt.norm() / (grad_adv.norm() + 1e-4)).clamp(0, 1e4).detach()
