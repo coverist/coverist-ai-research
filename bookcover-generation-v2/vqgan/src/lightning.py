@@ -116,7 +116,7 @@ class VQGANTrainingModule(LightningModule):
         if optimizer_idx == 0:
             return self.generator_step(images)
         elif optimizer_idx == 1:
-            return self.discriminator(images)
+            return self.discriminator_step(images)
 
     def training_step(
         self, images: torch.Tensor, batch_idx: int, optimizer_idx: int
