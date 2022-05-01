@@ -37,6 +37,11 @@ class VQGANTrainingModule(LightningModule):
     def calculate_adaptive_weight(
         self, content: torch.Tensor, adversarial: torch.Tensor
     ) -> torch.Tensor:
+        # If this function is called when validating, then just return `0` because it is
+        # impossible to calculate the gradients in validating mode.
+        if not self.training:
+            return 0
+
         last_layer = self.decoder.head.weight
         grad_cnt = torch.autograd.grad(content, last_layer, retain_graph=True)[0]
         grad_adv = torch.autograd.grad(adversarial, last_layer, retain_graph=True)[0]
