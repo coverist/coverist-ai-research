@@ -135,6 +135,8 @@ class VQGANTrainingModule(LightningModule):
         self.log("step", self.global_step)
         self.log_dict({f"val/{k}": v for k, v in metrics.items()})
 
+        # Prevent from storing unnecessary image tensors which consume large portion of
+        # GPU memory and occur OOM at validation.
         if batch_idx < self.num_log_batches:
             return images, decodings
         return None, None
