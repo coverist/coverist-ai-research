@@ -35,7 +35,7 @@ class RecursiveImageDataset(Dataset):
         )
 
         # Normalize the image and wrap with `torch.tensor`.
-        image = torch.from_numpy(2 * image.transpose(2, 0, 1) / 0xFF - 1)
+        image = 2 * torch.from_numpy(image).float().permute(2, 0, 1) / 0xFF - 1
         return image
 
 
