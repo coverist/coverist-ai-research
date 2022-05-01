@@ -49,7 +49,7 @@ class VQGANEncoder(nn.Module):
         if module is None:
             self.apply(self.init_weights)
         elif isinstance(module, nn.Conv2d):
-            nn.init.orthogonal_(module)
+            nn.init.orthogonal_(module.weight)
             nn.utils.parametrizations.spectral_norm(module)
 
     def forward(self, images: torch.Tensor) -> torch.Tensor:
@@ -90,7 +90,7 @@ class VQGANDecoder(nn.Module):
         if module is None:
             self.apply(self.init_weights)
         elif isinstance(module, nn.Conv2d):
-            nn.init.orthogonal_(module)
+            nn.init.orthogonal_(module.weight)
             nn.utils.parametrizations.spectral_norm(module)
 
     def forward(self, images: torch.Tensor) -> torch.Tensor:
@@ -165,7 +165,7 @@ class PatchDiscriminator(nn.Sequential):
         if module is None:
             self.apply(self.init_weights)
         elif isinstance(module, nn.Conv2d):
-            nn.init.orthogonal_(module)
+            nn.init.orthogonal_(module.weight)
             nn.utils.parametrizations.spectral_norm(module)
 
 
