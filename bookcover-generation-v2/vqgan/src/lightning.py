@@ -144,6 +144,9 @@ class VQGANTrainingModule(LightningModule):
     def validation_epoch_end(
         self, outputs: list[tuple[Optional[torch.Tensor], Optional[torch.Tensor]]]
     ):
+        if not outputs:
+            return
+
         # Get 64 original and reconstructed images.
         outputs = [output for output in outputs if output[0] is not None]
         images = torch.cat([output[0] for output in outputs])[:64]
