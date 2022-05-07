@@ -63,9 +63,14 @@ class VQGANTrainingModule(LightningModule):
         self, images: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor, dict[str, torch.Tensor]]:
         # Encode the images, quantize the latents, and decode with quantized vectors.
-        encodings = self.encoder(images)
-        latents, _, loss_quantization, perplexity = self.quantizer(encodings)
-        decodings = self.decoder(latents)
+        if self.training:
+            encodings = self.encoder(images)
+            latents, _, loss_quantization, perplexity = self.quantizer(encodings)
+            decodings = self.decoder(latents)
+        else:
+            encodings = self.encoder_ema(images)
+            latents, _, loss_quantization, perplexity = self.quantizer(encodings)
+            decodings = self.decoder_ema(latents)
 
         # Calculate the reconstruction loss, perceptual loss, and adversarial loss.
         loss_reconstruction = F.l1_loss(images, decodings)
@@ -114,6 +119,11 @@ class VQGANTrainingModule(LightningModule):
         self, images: torch.Tensor, optimizer_idx: int
     ) -> tuple[torch.Tensor, torch.Tensor, dict[str, torch.Tensor]]:
         if self.training:
+            # We will freeze the quantizer when EMA is enabled. It is because if the
+            # quantized vectors are changed by EMA, then it is impossible to quantize to
+            # the correct vectors. By freezing the quantizer, encoder and decoder will
+            # see the same quantization embeddings and it may lead stable generation
+            # performance through EMA.
             freeze_quantizer = self.current_epoch >= self.ema_start_after
 
             self.encoder.requires_grad_(optimizer_idx == 0)
