@@ -38,11 +38,14 @@ optim:
     perceptual: 0.1
     quantization: 1
     adversarial: 0.2
+  ema:
+    decay: 0.9999
+    start_after: 28
   num_discriminator_steps: 1
 
 train:
   name: vqgan-256-16384
-  epochs: 10
+  epochs: 30
   batch_size: 32
   accumulate_grad_batches: 1
   gradient_clip_val: 0.0
