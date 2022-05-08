@@ -60,11 +60,11 @@ def main(args: argparse.Namespace, config: DictConfig):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("config")
+    parser.add_argument("checkpoint")
     parser.add_argument("--input", default="../../resources/kyobobook-images/**/*.jpg")
     parser.add_argument("--output", default="kyobobook-quantized.csv")
     parser.add_argument("--image-size", type=int, default=384)
     parser.add_argument("--batch-size", type=int, default=128)
-    parser.add_argument("--checkpoint", default="last.ckpt")
     parser.add_argument("--use-fp16", action="store_true", default=False)
     args, unknown_args = parser.parse_known_args()
 
