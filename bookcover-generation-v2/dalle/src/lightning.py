@@ -3,7 +3,6 @@ from typing import Any, Optional
 
 import pandas as pd
 import torch
-import torch.nn as nn
 from omegaconf import DictConfig
 from pytorch_lightning import LightningDataModule, LightningModule
 from sklearn.model_selection import train_test_split
@@ -36,8 +35,6 @@ class DALLETrainingModule(LightningModule):
             config.model.encoder,
             decoder_model=GPT2LMHeadModel(GPT2Config(**config.model.decoder)),
         )
-        self.resize_token_type_embeddings()
-
         self.model.config.decoder_start_token_id = config.model.decoder.bos_token_id
         self.model.config.eos_token_id = config.model.decoder.eos_token_id
         self.model.config.pad_token_id = config.model.decoder.bos_token_id
@@ -45,15 +42,6 @@ class DALLETrainingModule(LightningModule):
 
         self.vqgan = VQGANDecoder.from_pretrained(config.model.vqgan)
         self.tokenizer = AutoTokenizer.from_pretrained(config.model.encoder)
-
-    def resize_token_type_embeddings(self, vocab_size: int = 16):
-        # Resize the token-type embeddings because we will use multiple sequence
-        # segments to the inputs.
-        self.model.config.encoder.type_vocab_size = vocab_size
-        encoder, hidden_size = self.model.encoder, self.model.config.encoder.hidden_size
-
-        encoder.embeddings.token_type_embeddings = nn.Embedding(vocab_size, hidden_size)
-        encoder._init_weights(encoder.embeddings.token_type_embeddings)
 
     def training_step(self, batch: dict[str, torch.Tensor], idx: int) -> torch.Tensor:
         loss = self.model(**batch).loss
