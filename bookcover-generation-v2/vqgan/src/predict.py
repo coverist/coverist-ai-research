@@ -11,18 +11,6 @@ from dataset import RecursiveImageDataset
 from lightning import VQGANTrainingModule
 
 
-def encode_to_alphabet_word(number: int) -> str:
-    word = ""
-    while number:
-        word += chr(number % 26 + 65)
-        number //= 26
-    return word
-
-
-def decode_alphabet_word(word: str) -> int:
-    return sum((ord(letter) - 65) * 26 ** i for i, letter in enumerate(word))
-
-
 @torch.no_grad()
 def main(args: argparse.Namespace, config: DictConfig):
     # Load the model weights from the checkpoint and move to the GPU memory and cast to
@@ -44,7 +32,7 @@ def main(args: argparse.Namespace, config: DictConfig):
         latent_ids = model.quantizer(model.encoder(images))[1]
 
         latent_ids = latent_ids.flatten(1).tolist()
-        latent_ids = [" ".join(map(encode_to_alphabet_word, i)) for i in latent_ids]
+        latent_ids = [" ".join(map(str, ids)) for ids in latent_ids]
         tokens_list.extend(latent_ids)
 
     results = [
