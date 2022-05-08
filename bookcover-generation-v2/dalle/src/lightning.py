@@ -102,9 +102,9 @@ class DALLETrainingDataModule(LightningDataModule):
 
         # Load an image dataset and create the dataset for pairing text descriptions and
         # images.
-        images = pd.read_csv(
-            self.config.data.image_dataset, dtype={"id": str}, index_col="id"
-        )
+        images = pd.read_csv(self.config.data.image_dataset, dtype={"id": str})
+        images = images.set_index("id")
+
         dataset = DALLEBookDataset(
             tokenizer, books, images, max_length=self.config.data.text_max_length
         )
