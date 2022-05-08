@@ -53,7 +53,7 @@ class VQGANDecoder(nn.Module):
             self.apply(self.init_weights)
         elif isinstance(module, nn.Conv2d):
             nn.init.orthogonal_(module.weight)
-            nn.util.spectral_norm(module)
+            nn.utils.spectral_norm(module)
 
     def forward(self, latent_ids: torch.Tensor) -> torch.Tensor:
         hidden = self.embeddings(latent_ids).permute(0, 3, 1, 2)
