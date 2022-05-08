@@ -8,6 +8,7 @@ model:
   vqgan: vqgan-decoder.pth
   encoder: klue/roberta-large
   decoder:
+    is_decoder: true
     add_cross_attention: true
     bos_token_id: 16384
     eos_token_id: 16384
