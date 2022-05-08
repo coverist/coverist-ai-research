@@ -93,8 +93,8 @@ class VQGANDecoder(nn.Module):
             nn.init.orthogonal_(module.weight)
             nn.utils.parametrizations.spectral_norm(module)
 
-    def forward(self, images: torch.Tensor) -> torch.Tensor:
-        hidden = self.stem(images)
+    def forward(self, latents: torch.Tensor) -> torch.Tensor:
+        hidden = self.stem(latents)
         for i, layers in enumerate(self.blocks):
             for layer in layers:
                 hidden = layer(hidden)
