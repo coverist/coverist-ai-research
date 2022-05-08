@@ -20,10 +20,7 @@ def encode_to_alphabet_word(number: int) -> str:
 
 
 def decode_alphabet_word(word: str) -> int:
-    number = 0
-    for i, letter in enumerate(word):
-        number += (ord(letter) - 65) * 26 ** i
-    return number
+    return sum((ord(letter) - 65) * 26 ** i for i, letter in enumerate(word))
 
 
 @torch.no_grad()
