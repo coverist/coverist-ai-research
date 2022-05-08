@@ -72,11 +72,11 @@ class VQGANDecoder(nn.Module):
 
         state_dict["state_dict"] = {
             k.replace("parametrizations.weight.original", "weight_orig"): v
-            for k, v in state_dict["state_dict"]
+            for k, v in state_dict["state_dict"].items()
         }
         state_dict["state_dict"] = {
             k.replace("parametrizations.weight.0.", "weight"): v
-            for k, v in state_dict["state_dict"]
+            for k, v in state_dict["state_dict"].items()
         }
 
         model = VQGANDecoder(**state_dict["config"])
