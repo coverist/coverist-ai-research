@@ -44,7 +44,7 @@ def main(args: argparse.Namespace, config: DictConfig):
     tokens_list = []
     for images in tqdm.tqdm(dataloader):
         images = images.cuda().type(torch.float16 if args.use_fp16 else torch.float32)
-        _, latent_ids, *_ = model.quantizer(model.encoder(images))
+        latent_ids = model.quantizer(model.encoder(images))[1]
 
         latent_ids = latent_ids.flatten(1).tolist()
         latent_ids = [" ".join(map(encode_to_alphabet_word, i)) for i in latent_ids]
