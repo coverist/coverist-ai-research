@@ -16,12 +16,6 @@ class DALLEBookDataset(Dataset):
     def __len__(self) -> int:
         return len(self.books)
 
-    def decode_alphabet_word_sequence(self, text: str) -> List[int]:
-        return [
-            sum((ord(letter) - 65) * 26 ** i for i, letter in enumerate(word))
-            for word in text.split()
-        ]
-
     def __getitem__(self, index: int) -> Dict[str, List[int]]:
         book_example = self.books.iloc[index]
         image_example = self.images.loc[book_example.isbn]
@@ -35,5 +29,5 @@ class DALLEBookDataset(Dataset):
         description = " ___ ".join(description)
 
         batch = self.tokenizer(description, truncation=True, max_length=self.max_length)
-        batch["labels"] = self.decode_alphabet_word_sequence(image_example.tokens)
+        batch["labels"] = list(map(int, image_example.tokens.split()))
         return batch
