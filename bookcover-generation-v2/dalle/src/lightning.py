@@ -14,6 +14,8 @@ from transformers import (
     BertLMHeadModel,
     DataCollatorForSeq2Seq,
     EncoderDecoderModel,
+    GPT2Config,
+    GPT2LMHeadModel,
     get_scheduler,
 )
 
@@ -33,7 +35,7 @@ class DALLETrainingModule(LightningModule):
 
         self.model = EncoderDecoderModel.from_encoder_decoder_pretrained(
             config.model.encoder,
-            decoder_model=BertLMHeadModel(BertConfig(**config.model.decoder)),
+            decoder_model=GPT2LMHeadModel(GPT2Config(**config.model.decoder)),
         )
         self.model.config.decoder_start_token_id = config.model.decoder.bos_token_id
         self.model.config.eos_token_id = config.model.decoder.eos_token_id
