@@ -10,14 +10,15 @@ model:
   decoder:
     is_decoder: true
     add_cross_attention: true
-    bos_token_id: 16384
-    eos_token_id: 16384
+    vocab_size: 16385
     hidden_size: 512
     num_hidden_layers: 6
     num_attention_heads: 8
     intermediate_size: 2048
+    max_position_embeddings: 577
     layer_norm_eps: 1e-5
-    vocab_size: 16385
+    bos_token_id: 16384
+    eos_token_id: 16384
   generation:
     max_length: 577
     min_length: 577
