@@ -29,14 +29,14 @@ class DALLEBookDataset(Dataset):
         image_example = self.images.loc[book_example.isbn]
 
         description = [
-            book_example.title,
-            book_example.author,
-            book_example.publisher,
-            book_example.category,
+            "제목: " + book_example.title,
+            "저자: " + book_example.author,
+            "출판사: " + book_example.publisher,
+            "카테고리: " + book_example.category,
         ]
-        description = f" {self.tokenizer.sep_token} ".join(description)
+        description = f" {self.tokenizer.unk_token} ".join(description)
 
         batch = self.tokenizer(description, truncation=True, max_length=self.max_length)
-        batch["token_type_ids"] = self.create_token_type_ids(batch["input_ids"])
+        # batch["token_type_ids"] = self.create_token_type_ids(batch["input_ids"])
         batch["labels"] = list(map(int, image_example.tokens.split()))
         return batch
