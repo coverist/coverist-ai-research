@@ -53,7 +53,7 @@ class VQGANDecoder(nn.Module):
             self.apply(self.init_weights)
         elif isinstance(module, nn.Conv2d):
             nn.init.orthogonal_(module.weight)
-            nn.utils.parametrizations.spectral_norm(module)
+            nn.util.spectral_norm(module)
 
     def forward(self, latent_ids: torch.Tensor) -> torch.Tensor:
         hidden = self.embeddings(latent_ids).permute(0, 3, 1, 2)
@@ -69,6 +69,16 @@ class VQGANDecoder(nn.Module):
     @staticmethod
     def from_pretrained(model_path: str) -> VQGANDecoder:
         state_dict = torch.load(model_path)
+
+        state_dict["state_dict"] = {
+            k.replace("parametrizations.weight.original", "weight_orig"): v
+            for k, v in state_dict["state_dict"]
+        }
+        state_dict["state_dict"] = {
+            k.replace("parametrizations.weight.0.", "weight"): v
+            for k, v in state_dict["state_dict"]
+        }
+
         model = VQGANDecoder(**state_dict["config"])
         model.load_state_dict(state_dict["state_dict"])
         return model
