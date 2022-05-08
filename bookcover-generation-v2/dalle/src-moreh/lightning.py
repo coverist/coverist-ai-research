@@ -62,7 +62,7 @@ class DALLETrainingModule(LightningModule):
             attention_mask=batch_list[0]["attention_mask"][:32],
             **self.config.model.generation
         )
-        outputs = outputs[:, 1:].unflatten(1, (int(outputs.size(1) ** 0.5), -1))
+        outputs = outputs[:, 1:].view(outputs.size(0), int(outputs.size(1) ** 0.5), -1)
 
         self.logger.log_image(
             "val/generated",
