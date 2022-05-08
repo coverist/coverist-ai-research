@@ -47,7 +47,9 @@ class DALLETrainingModule(LightningModule):
         self.model.encoder.embeddings.token_type_embeddings = nn.Embedding(
             16, self.model.config.encoder.hidden_size
         )
-        self.model._init_weights(self.model.encoder.embeddings.token_type_embeddings)
+        self.model.encoder._init_weights(
+            self.model.encoder.embeddings.token_type_embeddings
+        )
 
         self.vqgan = VQGANDecoder.from_pretrained(config.model.vqgan)
         self.tokenizer = AutoTokenizer.from_pretrained(config.model.encoder)
