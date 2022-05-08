@@ -36,7 +36,7 @@ class DALLETrainingModule(LightningModule):
             config.model.encoder,
             decoder_model=GPT2LMHeadModel(GPT2Config(**config.model.decoder)),
         )
-        # self.resize_token_type_embeddings()
+        self.resize_token_type_embeddings()
 
         self.model.config.decoder_start_token_id = config.model.decoder.bos_token_id
         self.model.config.eos_token_id = config.model.decoder.eos_token_id
