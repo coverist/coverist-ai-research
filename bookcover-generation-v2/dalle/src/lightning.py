@@ -3,6 +3,7 @@ from typing import Any, Optional
 
 import pandas as pd
 import torch
+import torch.nn as nn
 from omegaconf import DictConfig
 from pytorch_lightning import LightningDataModule, LightningModule
 from sklearn.model_selection import train_test_split
@@ -39,6 +40,14 @@ class DALLETrainingModule(LightningModule):
         self.model.config.eos_token_id = config.model.decoder.eos_token_id
         self.model.config.pad_token_id = config.model.decoder.bos_token_id
         self.model.config.vocab_size = config.model.decoder.vocab_size
+
+        # Resize the token-type embeddings because we will use multiple sequence
+        # segments to the inputs.
+        self.model.config.encoder.type_vocab_size = 16
+        self.model.encoder.embeddings.token_type_embeddings = nn.Embedding(
+            16, self.model.config.encoder.hidden_size
+        )
+        self.model._init_weights(self.model.encoder.embeddings.token_type_embeddings)
 
         self.vqgan = VQGANDecoder.from_pretrained(config.model.vqgan)
         self.tokenizer = AutoTokenizer.from_pretrained(config.model.encoder)
