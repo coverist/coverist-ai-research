@@ -36,23 +36,24 @@ class DALLETrainingModule(LightningModule):
             config.model.encoder,
             decoder_model=GPT2LMHeadModel(GPT2Config(**config.model.decoder)),
         )
+        self.resize_token_type_embeddings()
+
         self.model.config.decoder_start_token_id = config.model.decoder.bos_token_id
         self.model.config.eos_token_id = config.model.decoder.eos_token_id
         self.model.config.pad_token_id = config.model.decoder.bos_token_id
         self.model.config.vocab_size = config.model.decoder.vocab_size
 
+        self.vqgan = VQGANDecoder.from_pretrained(config.model.vqgan)
+        self.tokenizer = AutoTokenizer.from_pretrained(config.model.encoder)
+
+    def resize_token_type_embeddings(self):
         # Resize the token-type embeddings because we will use multiple sequence
         # segments to the inputs.
         self.model.config.encoder.type_vocab_size = 16
-        self.model.encoder.embeddings.token_type_embeddings = nn.Embedding(
-            16, self.model.config.encoder.hidden_size
-        )
-        self.model.encoder._init_weights(
-            self.model.encoder.embeddings.token_type_embeddings
-        )
+        encoder, hidden_size = self.model.encoder, self.model.config.encoder.hidden_size
 
-        self.vqgan = VQGANDecoder.from_pretrained(config.model.vqgan)
-        self.tokenizer = AutoTokenizer.from_pretrained(config.model.encoder)
+        encoder.embeddings.token_type_embeddings = nn.Embedding(16, hidden_size)
+        encoder._init_weights(encoder.embeddings.token_type_embeddings)
 
     def training_step(self, batch: dict[str, torch.Tensor], idx: int) -> torch.Tensor:
         loss = self.model(**batch).loss
