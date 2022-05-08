@@ -10,6 +10,13 @@ from pytorch_lightning.loggers import WandbLogger
 from dataset import create_train_val_dataloaders
 from lightning import VQGANTrainingModule
 
+try:
+    import apex
+
+    amp_backend = apex.__name__
+except ModuleNotFoundError:
+    amp_backend = "native"
+
 warnings.filterwarnings("ignore")
 
 
@@ -21,7 +28,7 @@ def main(
     trainer = Trainer(
         gpus=1,
         precision=16,
-        amp_backend="apex",
+        amp_backend=amp_backend,
         log_every_n_steps=config.train.log_every_n_steps,
         max_epochs=config.train.epochs,
         gradient_clip_val=config.train.gradient_clip_val,
