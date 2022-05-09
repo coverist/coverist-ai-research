@@ -13,9 +13,9 @@ model:
     bos_token_id: 16384
     eos_token_id: 16384
     initializer_range: 0.02
-    n_embd: 768
-    n_head: 12
-    n_layer: 12
+    n_embd: 512
+    n_head: 8
+    n_layer: 6
     vocab_size: 16385
   generation:
     max_length: 577
@@ -26,18 +26,18 @@ model:
 
 optim:
   optimizer:
-    lr: 1e-4
+    lr: 1e-3
     betas: [0.9, 0.999]
     eps: 1e-6
     weight_decay: 0.01
   scheduler:
     name: linear
-    num_warmup_steps: 5000
+    num_warmup_steps: 0
     num_training_steps: 500000
 
 train:
   name: dalle-klue-roberta-large
-  batch_size: 64
+  batch_size: 96
   accumulate_grad_batches: 1
   gradient_clip_val: 0.5
   validation_interval: 1.0
