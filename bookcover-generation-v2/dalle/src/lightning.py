@@ -53,6 +53,7 @@ class DALLETrainingModule(LightningModule):
         self, batch: dict[str, torch.Tensor], idx: int
     ) -> dict[str, torch.Tensor]:
         self.log("val/loss", self.model(**batch).loss)
+        self.log("step", self.global_step)
         return batch
 
     def validation_epoch_end(self, batch_list: list[dict[str, torch.Tensor]]):
