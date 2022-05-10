@@ -22,7 +22,7 @@ model:
     min_length: 577
     do_sample: true
     temperature: 1.0
-    top_k: 0
+    top_k: 50
 
 optim:
   optimizer:
