@@ -1,13 +1,10 @@
 import math
-from itertools import chain
 from typing import Any, Optional
 
 import torch
 import torch.nn.functional as F
 from omegaconf import DictConfig
 from pytorch_lightning import LightningModule
-from torch.nn.utils.parametrize import is_parametrized
-from torch.optim import Optimizer
 from torchvision.utils import make_grid
 
 from modeling import (
@@ -30,9 +27,6 @@ class VQGANTrainingModule(LightningModule):
         self.config = config
         self.num_log_batches = math.ceil(64 / self.config.train.batch_size)
 
-        self.ema_decay = config.optim.ema.decay
-        self.ema_start_after = config.optim.ema.start_after
-
         self.perceptual_loss_weight = config.optim.criterion.perceptual
         self.quantization_loss_weight = config.optim.criterion.quantization
         self.adversarial_loss_weight = config.optim.criterion.adversarial
@@ -42,9 +36,6 @@ class VQGANTrainingModule(LightningModule):
         self.quantizer = VQGANQuantizer(**config.model.quantizer)
         self.discriminator = PatchDiscriminator(**config.model.discriminator)
         self.perceptual = PerceptualLoss(**config.model.perceptual)
-
-        self.encoder_ema = VQGANEncoder(**config.model.encoder)
-        self.decoder_ema = VQGANDecoder(**config.model.decoder)
 
     def calculate_adaptive_weight(
         self, content: torch.Tensor, adversarial: torch.Tensor
@@ -63,14 +54,9 @@ class VQGANTrainingModule(LightningModule):
         self, images: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor, dict[str, torch.Tensor]]:
         # Encode the images, quantize the latents, and decode with quantized vectors.
-        if self.training:
-            encodings = self.encoder(images)
-            latents, _, loss_quantization, perplexity = self.quantizer(encodings)
-            decodings = self.decoder(latents)
-        else:
-            encodings = self.encoder_ema(images)
-            latents, _, loss_quantization, perplexity = self.quantizer(encodings)
-            decodings = self.decoder_ema(latents)
+        encodings = self.encoder(images)
+        latents, _, loss_quantization, perplexity = self.quantizer(encodings)
+        decodings = self.decoder(latents)
 
         # Calculate the reconstruction loss, perceptual loss, and adversarial loss.
         loss_reconstruction = F.l1_loss(images, decodings)
@@ -119,21 +105,14 @@ class VQGANTrainingModule(LightningModule):
         self, images: torch.Tensor, optimizer_idx: int
     ) -> tuple[torch.Tensor, torch.Tensor, dict[str, torch.Tensor]]:
         if self.training:
-            # We will freeze the quantizer when EMA is enabled. It is because if the
-            # quantized vectors are changed by EMA, then it is impossible to quantize to
-            # the correct vectors. By freezing the quantizer, encoder and decoder will
-            # see the same quantization embeddings and it may lead stable generation
-            # performance through EMA.
-            freeze_quantizer = self.current_epoch >= self.ema_start_after
-
             self.encoder.requires_grad_(optimizer_idx == 0)
             self.decoder.requires_grad_(optimizer_idx == 0)
-            self.quantizer.requires_grad_(optimizer_idx == 0 and not freeze_quantizer)
+            self.quantizer.requires_grad_(optimizer_idx == 0)
             self.discriminator.requires_grad_(optimizer_idx == 1)
 
             self.encoder.train(optimizer_idx == 0)
             self.decoder.train(optimizer_idx == 0)
-            self.quantizer.train(optimizer_idx == 0 and not freeze_quantizer)
+            self.quantizer.train(optimizer_idx == 0)
             self.discriminator.train(optimizer_idx == 1)
 
         if optimizer_idx == 0:
@@ -148,18 +127,6 @@ class VQGANTrainingModule(LightningModule):
         self.log("step", self.global_step)
         self.log_dict({f"train/{k}": v for k, v in metrics.items()})
         return loss
-
-    def on_validation_epoch_start(self):
-        self.encoder_ema.train()
-        self.decoder_ema.train()
-
-        # Recalculate the spectral-norm because the weights are EMA of original ones.
-        for module in chain(self.encoder_ema.modules(), self.decoder_ema.modules()):
-            if is_parametrized(module):
-                [module.weight for _ in range(15)]
-
-        self.encoder_ema.eval()
-        self.decoder_ema.eval()
 
     def validation_step(
         self, images: torch.Tensor, batch_idx: int
@@ -189,24 +156,6 @@ class VQGANTrainingModule(LightningModule):
         grid = torch.stack((images, decodings), dim=1).flatten(0, 1)
         grid = make_grid(grid, value_range=(-1, 1))
         self.logger.log_image("val/reconstructed", [grid])
-
-    @torch.no_grad()
-    def on_before_optimizer_step(self, optimizer: Optimizer, optimizer_idx: int):
-        if optimizer_idx != 0:
-            return
-        decay = 0.0 if self.current_epoch < self.ema_start_after else self.ema_decay
-
-        # Calculate exponential moving average of parameters and assign to the copies.
-        for p1, p2 in zip(self.encoder.parameters(), self.encoder_ema.parameters()):
-            p2.copy_(decay * p2.float() + (1 - decay) * p1.float())
-        for p1, p2 in zip(self.decoder.parameters(), self.decoder_ema.parameters()):
-            p2.copy_(decay * p2.float() + (1 - decay) * p1.float())
-
-        # Copy the buffers without EMA.
-        for b1, b2 in zip(self.encoder.buffers(), self.encoder_ema.buffers()):
-            b2.copy_(b1)
-        for b1, b2 in zip(self.decoder.buffers(), self.decoder_ema.buffers()):
-            b2.copy_(b1)
 
     def configure_optimizers(self) -> tuple[dict[str, Any], dict[str, Any]]:
         generator_params = (

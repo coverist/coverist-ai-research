@@ -38,9 +38,6 @@ optim:
     perceptual: 0.1
     quantization: 1
     adversarial: 0.2
-  ema:
-    decay: 0.999
-    start_after: 19
   num_discriminator_steps: 1
 
 train:
