@@ -3,7 +3,6 @@ from typing import Any, Optional
 
 import pandas as pd
 import torch
-import torch.nn as nn
 from omegaconf import DictConfig
 from pytorch_lightning import LightningDataModule, LightningModule
 from sklearn.model_selection import train_test_split
@@ -72,34 +71,13 @@ class DALLETrainingModule(LightningModule):
             caption=self.tokenizer.batch_decode(batch_list[0]["input_ids"][:32], True),
         )
 
-    def get_param_groups(
-        self, module: nn.Module, **kwargs: Any
-    ) -> list[dict[str, Any]]:
-        do_decay = [p for p in module.parameters() if p.ndim >= 2]
-        no_decay = [p for p in module.parameters() if p.ndim < 2]
-        return [
-            {"params": do_decay, **kwargs},
-            {"params": no_decay, **kwargs, "weight_decay": 0.0},
-        ]
+    def get_parameter_groups(self) -> list[dict[str, Any]]:
+        do_decay = [p for p in self.model.parameters() if p.ndim >= 2]
+        no_decay = [p for p in self.model.parameters() if p.ndim < 2]
+        return [{"params": do_decay}, {"params": no_decay, "weight_decay": 0.0}]
 
     def configure_optimizers(self) -> tuple[list[Optimizer], list[dict[str, Any]]]:
-        # Get parameter groups for encoder and decoder with different optimizer
-        # hyperparameters.
-        encoder_param_groups = self.get_param_groups(
-            self.model.encoder, **self.config.optim.encoder
-        )
-        decoder_param_groups = self.get_param_groups(
-            self.model.decoder, **self.config.optim.decoder
-        )
-
-        # There would be `enc_to_dec_proj` if the hidden sizes for encoder and decoder
-        # are different. We should optimize the layer as well.
-        if hasattr(self.model, "enc_to_dec_proj"):
-            encoder_param_groups += self.get_param_groups(
-                self.model.enc_to_dec_proj, **self.config.optim.encoder
-            )
-
-        optimizer = AdamW(encoder_param_groups + decoder_param_groups)
+        optimizer = AdamW(self.get_parameter_groups(), **self.config.optim.optimizer)
         scheduler = get_scheduler(optimizer=optimizer, **self.config.optim.scheduler)
         return [optimizer], [{"scheduler": scheduler, "interval": "step"}]
 
