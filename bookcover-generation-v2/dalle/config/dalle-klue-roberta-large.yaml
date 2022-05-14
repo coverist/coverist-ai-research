@@ -10,13 +10,13 @@ model:
   decoder:
     add_cross_attention: true
     activation_function: gelu
-    bos_token_id: 16384
-    eos_token_id: 16384
+    bos_token_id: 8192
+    eos_token_id: 8192
     initializer_range: 0.02
     n_embd: 512
     n_head: 8
     n_layer: 6
-    vocab_size: 16385
+    vocab_size: 8193
   generation:
     max_length: 577
     min_length: 577
