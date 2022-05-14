@@ -75,8 +75,8 @@ class DALLETrainingModule(LightningModule):
     def get_param_groups(
         self, module: nn.Module, **kwargs: Any
     ) -> list[dict[str, Any]]:
-        do_decay = [p for p in module.parameters() if p.ndim < 2]
-        no_decay = [p for p in module.parameters() if p.ndim >= 2]
+        do_decay = [p for p in module.parameters() if p.ndim >= 2]
+        no_decay = [p for p in module.parameters() if p.ndim < 2]
         return [
             {"params": do_decay, **kwargs},
             {"params": no_decay, **kwargs, "weight_decay": 0.0},
