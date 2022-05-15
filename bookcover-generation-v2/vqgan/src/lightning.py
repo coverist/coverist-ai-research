@@ -92,7 +92,7 @@ class VQGANTrainingModule(LightningModule):
         decodings = self.decoder(self.quantizer(self.encoder(images))[0])
         loss_discriminator_real = (1 - self.discriminator(images)).relu().mean()
         loss_discriminator_fake = (1 + self.discriminator(decodings)).relu().mean()
-        loss_discriminator = loss_discriminator_real + loss_discriminator_fake
+        loss_discriminator = (loss_discriminator_real + loss_discriminator_fake) / 2
 
         metrics = {
             "loss_discriminator": loss_discriminator,
