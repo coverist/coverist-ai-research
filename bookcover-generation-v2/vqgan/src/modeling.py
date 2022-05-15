@@ -27,7 +27,7 @@ class VQGANEncoder(nn.Module):
         self,
         num_channels: int = 3,
         embedding_dim: int = 256,
-        num_layers: tuple[int, ...] = (2, 2, 4, 4, 8),
+        num_layers: tuple[int, ...] = (2, 2, 4, 4, 4),
         hidden_dims: tuple[int, ...] = (128, 128, 256, 256, 512),
     ):
         super().__init__()
@@ -42,15 +42,6 @@ class VQGANEncoder(nn.Module):
             )
         )
         self.head = nn.Conv2d(hidden_dims[-1], embedding_dim, kernel_size=1)
-        self.init_weights()
-
-    @torch.no_grad()
-    def init_weights(self, module: Optional[nn.Module] = None):
-        if module is None:
-            self.apply(self.init_weights)
-        elif isinstance(module, nn.Conv2d):
-            nn.init.orthogonal_(module.weight)
-            nn.utils.parametrizations.spectral_norm(module)
 
     def forward(self, images: torch.Tensor) -> torch.Tensor:
         hidden = self.stem(images)
@@ -68,7 +59,7 @@ class VQGANDecoder(nn.Module):
         self,
         num_channels: int = 3,
         embedding_dim: int = 256,
-        num_layers: tuple[int, ...] = (8, 4, 4, 2, 2),
+        num_layers: tuple[int, ...] = (4, 4, 4, 2, 2),
         hidden_dims: tuple[int, ...] = (512, 256, 256, 128, 128),
     ):
         super().__init__()
@@ -83,15 +74,6 @@ class VQGANDecoder(nn.Module):
             )
         )
         self.head = nn.Conv2d(hidden_dims[-1], num_channels, kernel_size=3, padding=1)
-        self.init_weights()
-
-    @torch.no_grad()
-    def init_weights(self, module: Optional[nn.Module] = None):
-        if module is None:
-            self.apply(self.init_weights)
-        elif isinstance(module, nn.Conv2d):
-            nn.init.orthogonal_(module.weight)
-            nn.utils.parametrizations.spectral_norm(module)
 
     def forward(self, latents: torch.Tensor) -> torch.Tensor:
         hidden = self.stem(latents)

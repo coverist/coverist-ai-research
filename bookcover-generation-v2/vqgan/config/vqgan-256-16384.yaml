@@ -7,12 +7,12 @@ model:
   encoder:
     num_channels: 3
     embedding_dim: 256
-    num_layers: [2, 2, 4, 4, 8]
+    num_layers: [2, 2, 4, 4, 4]
     hidden_dims: [128, 128, 256, 256, 512]
   decoder:
     num_channels: 3
     embedding_dim: 256
-    num_layers: [8, 4, 4, 2, 2]
+    num_layers: [4, 4, 4, 2, 2]
     hidden_dims: [512, 256, 256, 128, 128]
   quantizer:
     num_embeddings: 16384
@@ -38,16 +38,13 @@ optim:
     perceptual: 0.1
     quantization: 1
     adversarial: 0.2
-  ema:
-    decay: 0.9999
-    start_after: 28
   num_discriminator_steps: 1
 
 train:
   name: vqgan-256-16384
-  epochs: 30
+  epochs: 20
   batch_size: 32
   accumulate_grad_batches: 1
   gradient_clip_val: 0.0
-  validation_interval: 0.25
+  validation_interval: 0.2
   log_every_n_steps: 10
