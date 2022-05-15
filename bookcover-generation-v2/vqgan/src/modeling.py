@@ -110,10 +110,8 @@ class VQGANQuantizer(nn.Module):
         num_embeddings: int = 16384,
         embedding_dim: int = 256,
         factorized_dim: int = 32,
-        orthogonal_sampling: int = 256,
     ):
         super().__init__()
-        self.orthogonal_sampling = orthogonal_sampling
         self.embeddings = nn.Embedding(num_embeddings, factorized_dim)
         self.projection = nn.Conv2d(embedding_dim, factorized_dim, kernel_size=1)
         self.expansion = nn.Conv2d(factorized_dim, embedding_dim, kernel_size=1)
@@ -138,11 +136,7 @@ class VQGANQuantizer(nn.Module):
 
         # Calculate the orthogonal loss which measures the cosine-similarities between
         # different embedding vectors.
-        random_indices = torch.randperm(embeddings.size(0), device=embeddings.device)
-        embedding_samples = embeddings[random_indices[: self.orthogonal_sampling]]
-
-        loss_orthogonal = (embedding_samples @ embedding_samples.T).triu(1)
-        loss_orthogonal = 2 * loss_orthogonal.square().mean()
+        loss_orthogonal = 2 * (embeddings @ embeddings.T).triu(1).square().mean()
 
         # Calculate the perplexity of quantizations to visualize the codebook usage.
         embedding_usages = flatten_indices.new_zeros(self.embeddings.num_embeddings)
