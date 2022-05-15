@@ -1,5 +1,3 @@
-from typing import Optional
-
 import timm
 import torch
 import torch.nn as nn
@@ -138,15 +136,6 @@ class PatchDiscriminator(nn.Sequential):
             nn.LeakyReLU(0.2),
             nn.Conv2d(8 * base_dim, 1, kernel_size=4, padding=1),
         )
-        self.init_weights()
-
-    @torch.no_grad()
-    def init_weights(self, module: Optional[nn.Module] = None):
-        if module is None:
-            self.apply(self.init_weights)
-        elif isinstance(module, nn.Conv2d):
-            nn.init.orthogonal_(module.weight)
-            nn.utils.parametrizations.spectral_norm(module)
 
 
 class PerceptualLoss(nn.Module):
