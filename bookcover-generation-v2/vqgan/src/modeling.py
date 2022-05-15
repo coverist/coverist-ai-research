@@ -1,5 +1,3 @@
-from typing import Optional
-
 import timm
 import torch
 import torch.nn as nn
@@ -26,8 +24,7 @@ class VQGANEncoder(nn.Module):
     def __init__(
         self,
         num_channels: int = 3,
-        embedding_dim: int = 256,
-        num_layers: tuple[int, ...] = (2, 2, 4, 4, 8),
+        num_layers: tuple[int, ...] = (2, 2, 4, 4, 4),
         hidden_dims: tuple[int, ...] = (128, 128, 256, 256, 512),
     ):
         super().__init__()
@@ -41,16 +38,7 @@ class VQGANEncoder(nn.Module):
                 [hidden_dims[0]] + hidden_dims[:-1], hidden_dims, num_layers
             )
         )
-        self.head = nn.Conv2d(hidden_dims[-1], embedding_dim, kernel_size=1)
-        self.init_weights()
-
-    @torch.no_grad()
-    def init_weights(self, module: Optional[nn.Module] = None):
-        if module is None:
-            self.apply(self.init_weights)
-        elif isinstance(module, nn.Conv2d):
-            nn.init.orthogonal_(module.weight)
-            nn.utils.parametrizations.spectral_norm(module)
+        self.head = nn.Conv2d(hidden_dims[-1], hidden_dims[-1], kernel_size=1)
 
     def forward(self, images: torch.Tensor) -> torch.Tensor:
         hidden = self.stem(images)
@@ -67,12 +55,11 @@ class VQGANDecoder(nn.Module):
     def __init__(
         self,
         num_channels: int = 3,
-        embedding_dim: int = 256,
-        num_layers: tuple[int, ...] = (8, 4, 4, 2, 2),
+        num_layers: tuple[int, ...] = (4, 4, 4, 2, 2),
         hidden_dims: tuple[int, ...] = (512, 256, 256, 128, 128),
     ):
         super().__init__()
-        self.stem = nn.Conv2d(embedding_dim, hidden_dims[0], kernel_size=1)
+        self.stem = nn.Conv2d(hidden_dims[0], hidden_dims[0], kernel_size=1)
         self.blocks = nn.ModuleList(
             nn.ModuleList(
                 VQGANLayer(input_dim if i == 0 else output_dim, output_dim)
@@ -83,15 +70,6 @@ class VQGANDecoder(nn.Module):
             )
         )
         self.head = nn.Conv2d(hidden_dims[-1], num_channels, kernel_size=3, padding=1)
-        self.init_weights()
-
-    @torch.no_grad()
-    def init_weights(self, module: Optional[nn.Module] = None):
-        if module is None:
-            self.apply(self.init_weights)
-        elif isinstance(module, nn.Conv2d):
-            nn.init.orthogonal_(module.weight)
-            nn.utils.parametrizations.spectral_norm(module)
 
     def forward(self, latents: torch.Tensor) -> torch.Tensor:
         hidden = self.stem(latents)
@@ -108,7 +86,7 @@ class VQGANQuantizer(nn.Module):
     def __init__(
         self,
         num_embeddings: int = 16384,
-        embedding_dim: int = 256,
+        embedding_dim: int = 512,
         factorized_dim: int = 32,
         orthogonal_sampling: int = 256,
     ):
@@ -168,15 +146,6 @@ class PatchDiscriminator(nn.Sequential):
             nn.LeakyReLU(0.2),
             nn.Conv2d(8 * base_dim, 1, kernel_size=4, padding=1),
         )
-        self.init_weights()
-
-    @torch.no_grad()
-    def init_weights(self, module: Optional[nn.Module] = None):
-        if module is None:
-            self.apply(self.init_weights)
-        elif isinstance(module, nn.Conv2d):
-            nn.init.orthogonal_(module.weight)
-            nn.utils.parametrizations.spectral_norm(module)
 
 
 class PerceptualLoss(nn.Module):
