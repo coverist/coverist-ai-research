@@ -18,6 +18,7 @@ model:
     num_embeddings: 8192
     embedding_dim: 256
     factorized_dim: 32
+    orthogonal_sampling: 256
   discriminator:
     num_channels: 3
     base_dim: 64
@@ -37,6 +38,7 @@ optim:
   criterion:
     perceptual: 0.1
     quantization: 1
+    orthogonal: 10
     adversarial: 0.2
   num_discriminator_steps: 1
 

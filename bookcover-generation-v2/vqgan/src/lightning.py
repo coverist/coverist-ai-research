@@ -29,6 +29,7 @@ class VQGANTrainingModule(LightningModule):
 
         self.perceptual_loss_weight = config.optim.criterion.perceptual
         self.quantization_loss_weight = config.optim.criterion.quantization
+        self.orthogonal_loss_weight = config.optim.criterion.orthogonal
         self.adversarial_loss_weight = config.optim.criterion.adversarial
 
         self.encoder = VQGANEncoder(**config.model.encoder)
@@ -55,10 +56,12 @@ class VQGANTrainingModule(LightningModule):
     ) -> tuple[torch.Tensor, torch.Tensor, dict[str, torch.Tensor]]:
         # Encode the images, quantize the latents, and decode with quantized vectors.
         encodings = self.encoder(images)
-        latents, _, loss_quantization, perplexity = self.quantizer(encodings)
+        latents, _, *metrics = self.quantizer(encodings)
         decodings = self.decoder(latents)
 
         # Calculate the reconstruction loss, perceptual loss, and adversarial loss.
+        loss_quantization, loss_orthogonal, perplexity = metrics
+
         loss_reconstruction = F.l1_loss(images, decodings)
         loss_perceptual = self.perceptual(images, decodings)
         loss_generator = -self.discriminator(decodings).mean()
@@ -73,12 +76,14 @@ class VQGANTrainingModule(LightningModule):
             loss_reconstruction
             + self.perceptual_loss_weight * loss_perceptual
             + self.quantization_loss_weight * loss_quantization
+            + self.orthogonal_loss_weight * loss_orthogonal
             + self.adversarial_loss_weight * adaptive_weight * loss_generator
         )
         metrics = {
             "loss_reconstruction": loss_reconstruction,
             "loss_perceptual": loss_perceptual,
             "loss_quantization": loss_quantization,
+            "loss_orthogonal": loss_orthogonal,
             "loss_generator": loss_generator,
             "adaptive_weight": adaptive_weight,
             "perplexity": perplexity,
