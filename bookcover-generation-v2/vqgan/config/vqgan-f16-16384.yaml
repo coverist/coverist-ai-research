@@ -35,7 +35,7 @@ optim:
   criterion:
     perceptual: 0.1
     quantization: 1
-    adversarial: 0.2
+    adversarial: 0.75
   num_discriminator_steps: 1
 
 train:
