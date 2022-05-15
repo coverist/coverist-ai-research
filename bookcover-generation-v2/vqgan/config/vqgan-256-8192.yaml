@@ -44,7 +44,7 @@ optim:
 
 train:
   name: vqgan-256-8192
-  epochs: 20
+  epochs: 30
   batch_size: 32
   accumulate_grad_batches: 1
   gradient_clip_val: 0.0
