@@ -26,7 +26,6 @@ class VQGANEncoder(nn.Module):
     def __init__(
         self,
         num_channels: int = 3,
-        embedding_dim: int = 256,
         num_layers: tuple[int, ...] = (2, 2, 4, 4, 4),
         hidden_dims: tuple[int, ...] = (128, 128, 256, 256, 512),
     ):
@@ -41,7 +40,7 @@ class VQGANEncoder(nn.Module):
                 [hidden_dims[0]] + hidden_dims[:-1], hidden_dims, num_layers
             )
         )
-        self.head = nn.Conv2d(hidden_dims[-1], embedding_dim, kernel_size=1)
+        self.head = nn.Conv2d(hidden_dims[-1], hidden_dims[-1], kernel_size=1)
 
     def forward(self, images: torch.Tensor) -> torch.Tensor:
         hidden = self.stem(images)
@@ -58,12 +57,11 @@ class VQGANDecoder(nn.Module):
     def __init__(
         self,
         num_channels: int = 3,
-        embedding_dim: int = 256,
         num_layers: tuple[int, ...] = (4, 4, 4, 2, 2),
         hidden_dims: tuple[int, ...] = (512, 256, 256, 128, 128),
     ):
         super().__init__()
-        self.stem = nn.Conv2d(embedding_dim, hidden_dims[0], kernel_size=1)
+        self.stem = nn.Conv2d(hidden_dims[0], hidden_dims[0], kernel_size=1)
         self.blocks = nn.ModuleList(
             nn.ModuleList(
                 VQGANLayer(input_dim if i == 0 else output_dim, output_dim)
@@ -90,7 +88,7 @@ class VQGANQuantizer(nn.Module):
     def __init__(
         self,
         num_embeddings: int = 16384,
-        embedding_dim: int = 256,
+        embedding_dim: int = 512,
         factorized_dim: int = 32,
     ):
         super().__init__()
