@@ -46,7 +46,7 @@ class VQGANTrainingModule(LightningModule):
         if not self.training:
             return 0
 
-        last_layer = self.decoder.head.weight
+        last_layer = self.decoder.head.parametrizations.weight.original
         grad_cnt = torch.autograd.grad(content, last_layer, retain_graph=True)[0]
         grad_adv = torch.autograd.grad(adversarial, last_layer, retain_graph=True)[0]
         return (grad_cnt.norm() / (grad_adv.norm() + 1e-4)).clamp(0, 1e4).detach()
@@ -97,7 +97,7 @@ class VQGANTrainingModule(LightningModule):
         decodings = self.decoder(self.quantizer(self.encoder(images))[0])
         loss_discriminator_real = (1 - self.discriminator(images)).relu().mean()
         loss_discriminator_fake = (1 + self.discriminator(decodings)).relu().mean()
-        loss_discriminator = (loss_discriminator_real + loss_discriminator_fake) / 2
+        loss_discriminator = loss_discriminator_real + loss_discriminator_fake
 
         metrics = {
             "loss_discriminator": loss_discriminator,
