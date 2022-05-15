@@ -1,5 +1,3 @@
-from typing import Optional
-
 import timm
 import torch
 import torch.nn as nn
@@ -27,7 +25,7 @@ class VQGANEncoder(nn.Module):
         self,
         num_channels: int = 3,
         embedding_dim: int = 256,
-        num_layers: tuple[int, ...] = (2, 2, 4, 4, 8),
+        num_layers: tuple[int, ...] = (2, 2, 2, 2, 2),
         hidden_dims: tuple[int, ...] = (128, 128, 256, 256, 512),
     ):
         super().__init__()
@@ -42,15 +40,6 @@ class VQGANEncoder(nn.Module):
             )
         )
         self.head = nn.Conv2d(hidden_dims[-1], embedding_dim, kernel_size=1)
-        self.init_weights()
-
-    @torch.no_grad()
-    def init_weights(self, module: Optional[nn.Module] = None):
-        if module is None:
-            self.apply(self.init_weights)
-        elif isinstance(module, nn.Conv2d):
-            nn.init.orthogonal_(module.weight)
-            nn.utils.parametrizations.spectral_norm(module)
 
     def forward(self, images: torch.Tensor) -> torch.Tensor:
         hidden = self.stem(images)
@@ -68,7 +57,7 @@ class VQGANDecoder(nn.Module):
         self,
         num_channels: int = 3,
         embedding_dim: int = 256,
-        num_layers: tuple[int, ...] = (8, 4, 4, 2, 2),
+        num_layers: tuple[int, ...] = (2, 2, 2, 2, 2),
         hidden_dims: tuple[int, ...] = (512, 256, 256, 128, 128),
     ):
         super().__init__()
@@ -83,15 +72,6 @@ class VQGANDecoder(nn.Module):
             )
         )
         self.head = nn.Conv2d(hidden_dims[-1], num_channels, kernel_size=3, padding=1)
-        self.init_weights()
-
-    @torch.no_grad()
-    def init_weights(self, module: Optional[nn.Module] = None):
-        if module is None:
-            self.apply(self.init_weights)
-        elif isinstance(module, nn.Conv2d):
-            nn.init.orthogonal_(module.weight)
-            nn.utils.parametrizations.spectral_norm(module)
 
     def forward(self, latents: torch.Tensor) -> torch.Tensor:
         hidden = self.stem(latents)
@@ -108,7 +88,7 @@ class VQGANQuantizer(nn.Module):
     def __init__(
         self,
         num_embeddings: int = 16384,
-        embedding_dim: int = 256,
+        embedding_dim: int = 512,
         factorized_dim: int = 32,
     ):
         super().__init__()
@@ -118,7 +98,7 @@ class VQGANQuantizer(nn.Module):
 
     def forward(
         self, encodings: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         encodings = F.normalize(self.projection(encodings), eps=1e-6)
         embeddings = F.normalize(self.embeddings.weight, eps=1e-6)
         cosine_similarities = torch.einsum("bdhw,nd->bnhw", encodings, embeddings)
@@ -134,10 +114,6 @@ class VQGANQuantizer(nn.Module):
         latents = encodings + (latents - encodings).detach()
         latents = self.expansion(latents)
 
-        # Calculate the orthogonal loss which measures the cosine-similarities between
-        # different embedding vectors.
-        loss_orthogonal = 2 * (embeddings @ embeddings.T).triu(1).square().mean()
-
         # Calculate the perplexity of quantizations to visualize the codebook usage.
         embedding_usages = flatten_indices.new_zeros(self.embeddings.num_embeddings)
         embedding_usages.scatter_(0, flatten_indices, 1, reduce="add")
@@ -146,7 +122,7 @@ class VQGANQuantizer(nn.Module):
         perplexity = -embedding_usages * (embedding_usages + 1e-6).log()
         perplexity = perplexity.sum().exp()
 
-        return latents, closest_indices, loss_quantization, loss_orthogonal, perplexity
+        return latents, closest_indices, loss_quantization, perplexity
 
 
 class PatchDiscriminator(nn.Sequential):
@@ -162,15 +138,6 @@ class PatchDiscriminator(nn.Sequential):
             nn.LeakyReLU(0.2),
             nn.Conv2d(8 * base_dim, 1, kernel_size=4, padding=1),
         )
-        self.init_weights()
-
-    @torch.no_grad()
-    def init_weights(self, module: Optional[nn.Module] = None):
-        if module is None:
-            self.apply(self.init_weights)
-        elif isinstance(module, nn.Conv2d):
-            nn.init.orthogonal_(module.weight)
-            nn.utils.parametrizations.spectral_norm(module)
 
 
 class PerceptualLoss(nn.Module):
