@@ -59,7 +59,7 @@ def main(args: argparse.Namespace, config: DictConfig):
             images = apply_augmentation(images)
 
         latent_ids = model.quantizer(model.encoder(images))[1]
-        tokens_list.append(latent_ids.type(torch.uint16).flatten(1).cpu().numpy())
+        tokens_list.append(latent_ids.flatten(1).cpu().numpy().astype(np.uint16))
 
     # Save the index of images and the quantized sequences. Note that the sequences will
     # be stored to `npy` so that other programs can use this through `np.memmap`.
