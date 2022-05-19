@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader, Dataset, Subset
 
 class RecursiveImageDataset(Dataset):
     def __init__(self, image_files: str, image_size: int = 256):
-        self.filenames = glob.glob(image_files, recursive=True)
+        self.filenames = sorted(glob.glob(image_files, recursive=True))
         self.image_size = image_size
 
     def __len__(self) -> int:

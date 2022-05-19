@@ -1,6 +1,7 @@
 import os
 from typing import Any, Optional
 
+import numpy as np
 import pandas as pd
 import torch
 from omegaconf import DictConfig
@@ -103,11 +104,19 @@ class DALLETrainingDataModule(LightningDataModule):
 
         # Load an image dataset and create the dataset for pairing text descriptions and
         # images.
-        images = pd.read_csv(self.config.data.image_dataset, dtype={"id": str})
-        images = images.set_index("id")
+        with open(self.config.data.image_dataset.index, "r") as fp:
+            images_index = fp.read().splitlines()
 
+        images_list = [
+            np.load(filename, mmap_mode="r")
+            for filename in self.config.data.image_dataset.filenames
+        ]
         dataset = DALLEBookDataset(
-            tokenizer, books, images, max_length=self.config.data.text_max_length
+            tokenizer,
+            books,
+            images_index,
+            images_list,
+            self.config.data.text_max_length,
         )
 
         # Split the dataset into train and validation.

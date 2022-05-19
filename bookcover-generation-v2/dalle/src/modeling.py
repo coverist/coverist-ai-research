@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -28,13 +26,12 @@ class VQGANDecoder(nn.Module):
         self,
         num_channels: int = 3,
         num_embeddings: int = 16384,
-        embedding_dim: int = 256,
-        num_layers: tuple[int, ...] = (8, 4, 4, 2, 2),
+        num_layers: tuple[int, ...] = (2, 2, 2, 2, 2),
         hidden_dims: tuple[int, ...] = (512, 256, 256, 128, 128),
     ):
         super().__init__()
-        self.embeddings = nn.Embedding(num_embeddings, embedding_dim)
-        self.stem = nn.Conv2d(embedding_dim, hidden_dims[0], kernel_size=1)
+        self.embeddings = nn.Embedding(num_embeddings, hidden_dims[0])
+        self.stem = nn.Conv2d(hidden_dims[0], hidden_dims[0], kernel_size=1)
         self.blocks = nn.ModuleList(
             nn.ModuleList(
                 VQGANLayer(input_dim if i == 0 else output_dim, output_dim)
@@ -45,15 +42,6 @@ class VQGANDecoder(nn.Module):
             )
         )
         self.head = nn.Conv2d(hidden_dims[-1], num_channels, kernel_size=3, padding=1)
-        self.init_weights()
-
-    @torch.no_grad()
-    def init_weights(self, module: Optional[nn.Module] = None):
-        if module is None:
-            self.apply(self.init_weights)
-        elif isinstance(module, nn.Conv2d):
-            nn.init.orthogonal_(module.weight)
-            nn.utils.parametrizations.spectral_norm(module)
 
     def forward(self, latent_ids: torch.Tensor) -> torch.Tensor:
         hidden = self.embeddings(latent_ids).permute(0, 3, 1, 2)

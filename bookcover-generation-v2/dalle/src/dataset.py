@@ -1,6 +1,9 @@
+import random
 from dataclasses import dataclass
 
+import numpy as np
 import pandas as pd
+import torch
 from torch.utils.data import Dataset
 from transformers import PreTrainedTokenizerBase
 
@@ -9,7 +12,8 @@ from transformers import PreTrainedTokenizerBase
 class DALLEBookDataset(Dataset):
     tokenizer: PreTrainedTokenizerBase
     books: pd.DataFrame
-    images: pd.DataFrame
+    images_index: list[str]
+    images_list: list[np.ndarray]
     max_length: int
 
     def __len__(self) -> int:
@@ -17,7 +21,8 @@ class DALLEBookDataset(Dataset):
 
     def __getitem__(self, index: int) -> dict[str, list[int]]:
         book_example = self.books.iloc[index]
-        image_example = self.images.loc[book_example.isbn]
+        image_example = random.choice(self.images_list)
+        image_example = image_example[self.images_index.index(book_example.isbn)]
 
         description = [
             book_example.title,
@@ -28,5 +33,5 @@ class DALLEBookDataset(Dataset):
         description = f" {self.tokenizer.sep_token} ".join(description)
 
         batch = self.tokenizer(description, truncation=True, max_length=self.max_length)
-        batch["labels"] = list(map(int, image_example.tokens.split()))
+        batch["labels"] = torch.from_numpy(image_example)
         return batch
