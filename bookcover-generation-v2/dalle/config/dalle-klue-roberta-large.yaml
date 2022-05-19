@@ -3,10 +3,10 @@ data:
   image_dataset:
     index: ../../resources/kyobobook-quantized.index
     filenames:
-    - ../../resources/kyobobook-quantized.csv
-    - ../../resources/kyobobook-quantized-augmentation1.csv
-    - ../../resources/kyobobook-quantized-augmentation2.csv
-    - ../../resources/kyobobook-quantized-augmentation3.csv
+    - ../../resources/kyobobook-quantized.npy
+    - ../../resources/kyobobook-quantized-augmentation1.npy
+    - ../../resources/kyobobook-quantized-augmentation2.npy
+    - ../../resources/kyobobook-quantized-augmentation3.npy
   text_max_length: 64
   validation_ratio: 0.01
 
