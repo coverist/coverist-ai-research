@@ -33,5 +33,5 @@ class DALLEBookDataset(Dataset):
         description = f" {self.tokenizer.sep_token} ".join(description)
 
         batch = self.tokenizer(description, truncation=True, max_length=self.max_length)
-        batch["labels"] = torch.from_numpy(image_example)
+        batch["labels"] = torch.from_numpy(image_example.astype(np.int64))
         return batch
