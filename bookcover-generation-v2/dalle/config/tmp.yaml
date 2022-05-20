@@ -1,15 +1,18 @@
 data:
   book_dataset: ../../resources/kyobobook-dataset.jsonl
   image_dataset:
-    index: ../vqgan/kyobobook-quantized.index
+    index: ../../resources/kyobobook-quantized.index
     filenames:
-    - ../vqgan/kyobobook-quantized.npy
+    - ../../resources/kyobobook-quantized.npy
+    - ../../resources/kyobobook-quantized-augmentation1.npy
+    - ../../resources/kyobobook-quantized-augmentation2.npy
+    - ../../resources/kyobobook-quantized-augmentation3.npy
   text_max_length: 64
   validation_ratio: 0.01
 
 model:
   vqgan: vqgan-decoder.pth
-  encoder: klue/roberta-large
+  encoder: monologg/koelectra-small-v3-discriminator
   decoder:
     add_cross_attention: true
     activation_function: gelu
@@ -18,20 +21,20 @@ model:
     initializer_range: 0.02
     n_embd: 512
     n_head: 8
-    n_layer: 6
+    n_layer: 16
     vocab_size: 16385
   generation:
-    max_length: 257
-    min_length: 257
+    max_length: 577
+    min_length: 577
     do_sample: true
     temperature: 1.0
     top_k: 50
 
 optim:
   optimizer:
-    lr: 6e-5
+    lr: 5e-4
     betas: [0.9, 0.999]
-    eps: 1e-6
+    eps: 1e-8
     weight_decay: 0.01
   scheduler:
     name: linear
