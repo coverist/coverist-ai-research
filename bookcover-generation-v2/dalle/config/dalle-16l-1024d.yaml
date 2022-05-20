@@ -12,7 +12,7 @@ data:
 
 model:
   vqgan: vqgan-decoder.pth
-  encoder: klue/roberta-large
+  encoder: monologg/koelectra-small-v3-discriminator
   decoder:
     add_cross_attention: true
     activation_function: gelu
