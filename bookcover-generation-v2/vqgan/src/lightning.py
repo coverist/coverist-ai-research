@@ -57,6 +57,10 @@ class VQGANTrainingModule(LightningModule):
         # Encode the images, quantize the latents, and decode with quantized vectors.
         encodings = self.encoder(images)
         latents, _, loss_quantization, perplexity = self.quantizer(encodings)
+
+        if self.train_only_decoder:
+            latents = latents.detach()
+            loss_quantization = loss_quantization.detach()
         decodings = self.decoder(latents)
 
         # Calculate the reconstruction loss, perceptual loss, and adversarial loss.
@@ -163,14 +167,11 @@ class VQGANTrainingModule(LightningModule):
         self.logger.log_image("val/reconstructed", [grid])
 
     def configure_optimizers(self) -> tuple[dict[str, Any], dict[str, Any]]:
-        if self.train_only_decoder:
-            generator_params = self.decoder.parameters()
-        else:
-            generator_params = (
-                list(self.encoder.parameters())
-                + list(self.decoder.parameters())
-                + list(self.quantizer.parameters())
-            )
+        generator_params = (
+            list(self.encoder.parameters())
+            + list(self.decoder.parameters())
+            + list(self.quantizer.parameters())
+        )
         discriminator_params = self.discriminator.parameters()
 
         generator_optimizer = {
