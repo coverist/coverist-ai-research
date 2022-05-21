@@ -1,45 +1,105 @@
+from typing import Optional
+
 import timm
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 
+class VQGANLayer(nn.Module):
+    def __init__(self, input_dim: int, output_dim: int):
+        super().__init__()
+        self.conv1 = nn.Conv2d(input_dim, output_dim, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv2d(output_dim, output_dim, kernel_size=3, padding=1)
+
+        if input_dim != output_dim:
+            self.shortcut = nn.Conv2d(input_dim, output_dim, kernel_size=1)
+
+    def forward(self, hidden: torch.Tensor) -> torch.Tensor:
+        shortcut = self.shortcut(hidden) if hasattr(self, "shortcut") else hidden
+        hidden = self.conv1(hidden.relu())
+        hidden = self.conv2(hidden.relu())
+        return hidden + shortcut
+
+
 class VQGANEncoder(nn.Module):
     def __init__(
         self,
         num_channels: int = 3,
-        hidden_dims: tuple[int, ...] = (512, 512, 512, 512),
+        num_layers: tuple[int, ...] = (2, 2, 2, 2, 2),
+        hidden_dims: tuple[int, ...] = (128, 128, 256, 256, 512),
     ):
         super().__init__()
-        hidden_dims = (num_channels,) + tuple(hidden_dims)
-        self.layers = nn.ModuleList(
-            nn.Conv2d(input_dim, output_dim, 4, stride=2, padding=1)
-            for input_dim, output_dim in zip(hidden_dims[:-1], hidden_dims[1:])
+        self.stem = nn.Conv2d(num_channels, hidden_dims[0], kernel_size=3, padding=1)
+        self.blocks = nn.ModuleList(
+            nn.ModuleList(
+                VQGANLayer(input_dim if i == 0 else output_dim, output_dim)
+                for i in range(num_repeats)
+            )
+            for input_dim, output_dim, num_repeats in zip(
+                [hidden_dims[0]] + hidden_dims[:-1], hidden_dims, num_layers
+            )
         )
+        self.head = nn.Conv2d(hidden_dims[-1], hidden_dims[-1], kernel_size=1)
+        self.init_weights()
+
+    @torch.no_grad()
+    def init_weights(self, module: Optional[nn.Module] = None):
+        if module is None:
+            self.apply(self.init_weights)
+        elif isinstance(module, nn.Conv2d):
+            nn.init.orthogonal_(module.weight)
+            nn.utils.parametrizations.spectral_norm(module)
 
     def forward(self, images: torch.Tensor) -> torch.Tensor:
-        for i, layer in enumerate(self.layers):
-            images = layer(images).relu()
-        return images
+        hidden = self.stem(images)
+        for i, layers in enumerate(self.blocks):
+            for layer in layers:
+                hidden = layer(hidden)
+            if i < len(self.blocks) - 1:
+                hidden = F.avg_pool2d(hidden, kernel_size=2, stride=2)
+        hidden = self.head(hidden)
+        return hidden
 
 
 class VQGANDecoder(nn.Module):
     def __init__(
         self,
         num_channels: int = 3,
-        hidden_dims: tuple[int, ...] = (512, 512, 512, 512),
+        num_layers: tuple[int, ...] = (2, 2, 2, 2, 2),
+        hidden_dims: tuple[int, ...] = (512, 256, 256, 128, 128),
     ):
         super().__init__()
-        hidden_dims = tuple(hidden_dims) + (num_channels,)
-        self.layers = nn.ModuleList(
-            nn.ConvTranspose2d(input_dim, output_dim, 4, stride=2, padding=1)
-            for input_dim, output_dim in zip(hidden_dims[:-1], hidden_dims[1:])
+        self.stem = nn.Conv2d(hidden_dims[0], hidden_dims[0], kernel_size=1)
+        self.blocks = nn.ModuleList(
+            nn.ModuleList(
+                VQGANLayer(input_dim if i == 0 else output_dim, output_dim)
+                for i in range(num_repeats)
+            )
+            for input_dim, output_dim, num_repeats in zip(
+                [hidden_dims[0]] + hidden_dims[:-1], hidden_dims, num_layers
+            )
         )
+        self.head = nn.Conv2d(hidden_dims[-1], num_channels, kernel_size=3, padding=1)
+        self.init_weights()
 
-    def forward(self, images: torch.Tensor) -> torch.Tensor:
-        for layer in self.layers:
-            images = layer(images.relu())
-        return images.tanh()
+    @torch.no_grad()
+    def init_weights(self, module: Optional[nn.Module] = None):
+        if module is None:
+            self.apply(self.init_weights)
+        elif isinstance(module, nn.Conv2d):
+            nn.init.orthogonal_(module.weight)
+            nn.utils.parametrizations.spectral_norm(module)
+
+    def forward(self, latents: torch.Tensor) -> torch.Tensor:
+        hidden = self.stem(latents)
+        for i, layers in enumerate(self.blocks):
+            for layer in layers:
+                hidden = layer(hidden)
+            if i < len(self.blocks) - 1:
+                hidden = F.interpolate(hidden, scale_factor=2, mode="nearest")
+        hidden = self.head(hidden)
+        return hidden.tanh()
 
 
 class VQGANQuantizer(nn.Module):
@@ -96,6 +156,15 @@ class PatchDiscriminator(nn.Sequential):
             nn.LeakyReLU(0.2),
             nn.Conv2d(8 * base_dim, 1, kernel_size=4, padding=1),
         )
+        self.init_weights()
+
+    @torch.no_grad()
+    def init_weights(self, module: Optional[nn.Module] = None):
+        if module is None:
+            self.apply(self.init_weights)
+        elif isinstance(module, nn.Conv2d):
+            nn.init.orthogonal_(module.weight)
+            nn.utils.parametrizations.spectral_norm(module)
 
 
 class PerceptualLoss(nn.Module):

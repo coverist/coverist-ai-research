@@ -6,10 +6,12 @@ data:
 model:
   encoder:
     num_channels: 3
-    hidden_dims: [512, 512, 512, 512]
+    num_layers: [1, 1, 4, 8, 1]
+    hidden_dims: [32, 64, 128, 256, 256]
   decoder:
     num_channels: 3
-    hidden_dims: [512, 512, 512, 512]
+    num_layers: [1, 1, 4, 8, 1]
+    hidden_dims: [256, 256, 128, 64, 32]
   quantizer:
     num_embeddings: 16384
     embedding_dim: 512
@@ -33,7 +35,7 @@ optim:
   criterion:
     perceptual: 0.1
     quantization: 1
-    adversarial: 0.2
+    adversarial: 0.75
   num_discriminator_steps: 1
 
 train:
