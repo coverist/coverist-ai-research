@@ -110,19 +110,19 @@ class VQGANTrainingModule(LightningModule):
         self, images: torch.Tensor, optimizer_idx: int
     ) -> tuple[torch.Tensor, torch.Tensor, dict[str, torch.Tensor]]:
         if self.training:
-            self.encoder.requires_grad_(
-                not self.train_only_decoder and optimizer_idx == 0
-            )
-            self.decoder.requires_grad_(optimizer_idx == 0)
-            self.quantizer.requires_grad_(
-                not self.train_only_decoder and optimizer_idx == 0
-            )
-            self.discriminator.requires_grad_(optimizer_idx == 1)
+            for_encoder_quantizer = not self.train_only_decoder and optimizer_idx == 0
+            for_decoder = optimizer_idx == 0
+            for_discriminator = optimizer_idx == 1
 
-            self.encoder.train(not self.train_only_decoder and optimizer_idx == 0)
-            self.decoder.train(optimizer_idx == 0)
-            self.quantizer.train(not self.train_only_decoder and optimizer_idx == 0)
-            self.discriminator.train(optimizer_idx == 1)
+            self.encoder.requires_grad_(for_encoder_quantizer)
+            self.decoder.requires_grad_(for_decoder)
+            self.quantizer.requires_grad_(for_encoder_quantizer)
+            self.discriminator.requires_grad_(for_discriminator)
+
+            self.encoder.train(for_encoder_quantizer)
+            self.decoder.train(for_decoder)
+            self.quantizer.train(for_encoder_quantizer)
+            self.discriminator.train(for_discriminator)
 
         if optimizer_idx == 0:
             return self.generator_step(images)
