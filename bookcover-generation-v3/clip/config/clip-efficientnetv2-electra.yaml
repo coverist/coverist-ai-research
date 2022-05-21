@@ -1,0 +1,32 @@
+data:
+  dataset: ../../resources/kyobobook-dataset.jsonl
+  image_dir: ../../resources/kyobobook-images
+  image_size: 384
+  max_length: 64
+  drop_prob: 0.1
+  validation_ratio: 0.01
+
+model:
+  image_encoder: tf_efficientnetv2_s_in21ft1k
+  text_encoder: monologg/koelectra-base-v3-discriminator
+  embedding_dim: 1024
+
+optim:
+  optimizer:
+    lr: 5e-5
+    betas: [0.9, 0.999]
+    eps: 1e-6
+    weight_decay: 0.01
+  scheduler:
+    name: cosine
+    num_warmup_steps: 1000
+    num_training_steps: 30000
+
+train:
+  name: clip-efficientnetv2-electra
+  batch_size: 768
+  accumulate_grad_batches: 1
+  gradient_clip_val: 0.0
+  validation_interval: 1.0
+  use_gradient_checkpoint: true
+  log_every_n_steps: 1

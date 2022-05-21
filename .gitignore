@@ -184,3 +184,4 @@ backups
 .DS_Store
 *.ipynb
 *.pth
+*.npy
