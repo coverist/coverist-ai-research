@@ -26,6 +26,7 @@ class VQGANTrainingModule(LightningModule):
         super().__init__()
         self.config = config
         self.num_log_batches = math.ceil(64 / self.config.train.batch_size)
+        self.train_only_decoder = config.optim.train_only_decoder
 
         self.perceptual_loss_weight = config.optim.criterion.perceptual
         self.quantization_loss_weight = config.optim.criterion.quantization
@@ -105,14 +106,18 @@ class VQGANTrainingModule(LightningModule):
         self, images: torch.Tensor, optimizer_idx: int
     ) -> tuple[torch.Tensor, torch.Tensor, dict[str, torch.Tensor]]:
         if self.training:
-            self.encoder.requires_grad_(optimizer_idx == 0)
+            self.encoder.requires_grad_(
+                not self.train_only_decoder and optimizer_idx == 0
+            )
             self.decoder.requires_grad_(optimizer_idx == 0)
-            self.quantizer.requires_grad_(optimizer_idx == 0)
+            self.quantizer.requires_grad_(
+                not self.train_only_decoder and optimizer_idx == 0
+            )
             self.discriminator.requires_grad_(optimizer_idx == 1)
 
-            self.encoder.train(optimizer_idx == 0)
+            self.encoder.train(not self.train_only_decoder and optimizer_idx == 0)
             self.decoder.train(optimizer_idx == 0)
-            self.quantizer.train(optimizer_idx == 0)
+            self.quantizer.train(not self.train_only_decoder and optimizer_idx == 0)
             self.discriminator.train(optimizer_idx == 1)
 
         if optimizer_idx == 0:
@@ -158,11 +163,14 @@ class VQGANTrainingModule(LightningModule):
         self.logger.log_image("val/reconstructed", [grid])
 
     def configure_optimizers(self) -> tuple[dict[str, Any], dict[str, Any]]:
-        generator_params = (
-            list(self.encoder.parameters())
-            + list(self.decoder.parameters())
-            + list(self.quantizer.parameters())
-        )
+        if self.train_only_decoder:
+            generator_params = self.decoder.parameters()
+        else:
+            generator_params = (
+                list(self.encoder.parameters())
+                + list(self.decoder.parameters())
+                + list(self.quantizer.parameters())
+            )
         discriminator_params = self.discriminator.parameters()
 
         generator_optimizer = {

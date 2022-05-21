@@ -37,6 +37,7 @@ optim:
     quantization: 1
     adversarial: 0.75
   num_discriminator_steps: 1
+  train_only_decoder: false
 
 train:
   name: vqgan-f16-16384
