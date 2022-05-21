@@ -46,7 +46,8 @@ class VQGANEncoder(nn.Module):
     @torch.no_grad()
     def init_weights(self, module: Optional[nn.Module] = None):
         if module is None:
-            self.apply(self.init_weights)
+            self.stem.apply(self.init_weights)
+            self.blocks.apply(self.init_weights)
         elif isinstance(module, nn.Conv2d):
             nn.init.orthogonal_(module.weight)
             nn.utils.parametrizations.spectral_norm(module)
@@ -86,7 +87,8 @@ class VQGANDecoder(nn.Module):
     @torch.no_grad()
     def init_weights(self, module: Optional[nn.Module] = None):
         if module is None:
-            self.apply(self.init_weights)
+            self.stem.apply(self.init_weights)
+            self.blocks.apply(self.init_weights)
         elif isinstance(module, nn.Conv2d):
             nn.init.orthogonal_(module.weight)
             nn.utils.parametrizations.spectral_norm(module)
