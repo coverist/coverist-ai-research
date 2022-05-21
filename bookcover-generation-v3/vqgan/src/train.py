@@ -30,7 +30,7 @@ def main(
         check_val_every_n_epoch=max(int(config.train.validation_interval), 1),
         callbacks=[ModelCheckpoint(save_last=True)],
         logger=WandbLogger(
-            project="bookcover-generation-v3-vqgan",
+            project="bookcover-generation-v2-vqgan",
             name=config.train.name,
             id=resume_id,
         ),
