@@ -117,18 +117,16 @@ class VQGANQuantizer(nn.Module):
     def forward(
         self, encodings: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-        encodings = self.projection(encodings)
-        cosine_similarities = torch.einsum(
-            "bdhw,nd->bnhw",
-            F.normalize(encodings, eps=1e-6),
-            F.normalize(self.embeddings.weight, eps=1e-6),
-        )
+        encodings = F.normalize(self.projection(encodings), eps=1e-6)
+        embeddings = F.normalize(self.embeddings.weight, eps=1e-6)
+        cosine_similarities = torch.einsum("bdhw,nd->bnhw", encodings, embeddings)
+
         closest_indices = cosine_similarities.argmax(dim=1)
         flatten_indices = closest_indices.flatten()
 
         # Get closest codebook embedding vectors, compute the quantization loss and
         # apply a gradient trick with expanding to the original embedding space.
-        latents = self.embeddings(closest_indices).permute(0, 3, 1, 2)
+        latents = F.embedding(closest_indices, embeddings).permute(0, 3, 1, 2)
         loss_quantization = F.mse_loss(encodings, latents)
 
         latents = encodings + (latents - encodings).detach()
