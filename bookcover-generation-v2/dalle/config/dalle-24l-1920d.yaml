@@ -45,7 +45,7 @@ train:
   name: dalle-16l-1024d
   batch_size: 32
   accumulate_grad_batches: 1
-  gradient_clip_val: 0.5
+  gradient_clip_val: 0.0
   gradient_checkpointing: true
   validation_interval: 1.0
   log_every_n_steps: 10
