@@ -185,3 +185,5 @@ backups
 *.ipynb
 *.pth
 *.npy
+*.png
+clip-text-encoder
