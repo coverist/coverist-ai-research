@@ -12,16 +12,16 @@ data:
 
 model:
   vqgan: vqgan-decoder.pth
-  encoder: monologg/koelectra-small-v3-discriminator
+  encoder: monologg/koelectra-base-v3-discriminator
   decoder:
     add_cross_attention: true
     activation_function: gelu
     bos_token_id: 16384
     eos_token_id: 16384
     initializer_range: 0.02
-    n_embd: 1024
+    n_embd: 1920
     n_head: 16
-    n_layer: 16
+    n_layer: 24
     vocab_size: 16385
   generation:
     max_length: 577
@@ -46,6 +46,6 @@ train:
   batch_size: 32
   accumulate_grad_batches: 1
   gradient_clip_val: 0.5
-  gradient_checkpointing: false
+  gradient_checkpointing: true
   validation_interval: 1.0
   log_every_n_steps: 10
