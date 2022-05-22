@@ -23,9 +23,11 @@ model:
     n_head: 16
     n_layer: 24
     vocab_size: 16385
+    use_cache: false
   generation:
     max_length: 577
     min_length: 577
+    use_cache: true
     do_sample: true
     temperature: 1.0
     top_k: 50
