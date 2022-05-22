@@ -45,7 +45,8 @@ class DALLETrainingModule(LightningModule):
         self.tokenizer = AutoTokenizer.from_pretrained(config.model.encoder)
 
         if config.train.gradient_checkpointing:
-            self.model.gradient_checkpointing_enable()
+            self.model.encoder.gradient_checkpointing_enable()
+            self.model.decoder.gradient_checkpointing_enable()
 
     def training_step(self, batch: dict[str, torch.Tensor], idx: int) -> torch.Tensor:
         loss = self.model(**batch).loss
