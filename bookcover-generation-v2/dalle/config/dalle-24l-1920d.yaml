@@ -42,7 +42,7 @@ optim:
     num_training_steps: 1000000
 
 train:
-  name: dalle-16l-1024d
+  name: dalle-24l-1920d
   batch_size: 32
   accumulate_grad_batches: 1
   gradient_clip_val: 0.0
