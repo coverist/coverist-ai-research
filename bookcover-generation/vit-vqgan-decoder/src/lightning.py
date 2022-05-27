@@ -126,19 +126,16 @@ class VQGANTrainingModule(LightningModule):
         self.logger.log_image("val/reconstructed", [grid])
 
     def configure_optimizers(self) -> tuple[dict[str, Any], dict[str, Any]]:
-        generator_params = (
-            list(self.encoder.parameters())
-            + list(self.decoder.parameters())
-            + list(self.quantizer.parameters())
+        generator_optimizer = AdamW(
+            self.decoder.parameters(), **self.config.optim.generator
         )
-        discriminator_params = self.discriminator.parameters()
+        generator_optimizer = {"optimizer": generator_optimizer, "frequency": 1}
 
-        generator_optimizer = {
-            "optimizer": AdamW(generator_params, **self.config.optim.generator),
-            "frequency": 1,
-        }
+        discriminator_optimizer = AdamW(
+            self.discriminator.parameters(), **self.config.optim.discriminator
+        )
         discriminator_optimizer = {
-            "optimizer": AdamW(discriminator_params, **self.config.optim.discriminator),
+            "optimizer": discriminator_optimizer,
             "frequency": self.config.optim.num_discriminator_steps,
         }
         return generator_optimizer, discriminator_optimizer
