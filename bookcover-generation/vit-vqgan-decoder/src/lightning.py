@@ -143,22 +143,24 @@ class VQGANTrainingModule(LightningModule):
             optimizer=discriminator_optimizer, **self.config.optim.scheduler
         )
 
-        generator_optimizer = {"optimizer": generator_optimizer, "frequency": 1}
-        discriminator_optimizer = {
-            "optimizer": discriminator_optimizer,
-            "frequency": self.config.optim.num_discriminator_steps,
-        }
-
         generator_scheduler = {"scheduler": generator_scheduler, "interval": "step"}
         discriminator_scheduler = {
             "scheduler": discriminator_scheduler,
             "interval": "step",
         }
 
-        return (
-            [generator_optimizer, discriminator_optimizer],
-            [generator_scheduler, discriminator_scheduler],
-        )
+        generator_optimizer = {
+            "optimizer": generator_optimizer,
+            "frequency": 1,
+            "lr_scheduler": generator_scheduler,
+        }
+        discriminator_optimizer = {
+            "optimizer": discriminator_optimizer,
+            "frequency": self.config.optim.num_discriminator_steps,
+            "lr_scheduler": discriminator_scheduler,
+        }
+
+        return [generator_optimizer, discriminator_optimizer]
 
     def on_load_checkpoint(self, checkpoint: dict[str, Any]):
         if "ApexMixedPrecisionPlugin" in checkpoint:
