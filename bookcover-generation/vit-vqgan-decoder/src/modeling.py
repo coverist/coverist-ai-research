@@ -36,11 +36,13 @@ class Discriminator(nn.Sequential):
 
 
 class OCRPerceptualLoss(nn.Module):
-    def __init__(self, input_size: tuple[int, int] = (192, 192)):
+    def __init__(
+        self, input_size: tuple[int, int] = (192, 192), language: list[str] = ["ko"]
+    ):
         super().__init__()
         self.input_size = input_size
 
-        self.model = easyocr.Reader(["ko"]).detector.module.basenet
+        self.model = easyocr.Reader(language).detector.module.basenet
         self.model.requires_grad_(False)
 
         self.register_buffer("shift", torch.tensor([[[[0.03]], [[0.088]], [[0.188]]]]))
