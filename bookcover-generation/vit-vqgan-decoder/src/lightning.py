@@ -74,7 +74,7 @@ class VQGANTrainingModule(LightningModule):
         return reconstructed, loss_discriminator, metrics
 
     def forward(
-        self, images: torch.Tensor, optimizer_idx: int
+        self, latent_ids: torch.Tensor, images: torch.Tensor, optimizer_idx: int
     ) -> tuple[torch.Tensor, torch.Tensor, dict[str, torch.Tensor]]:
         if self.training:
             self.decoder.requires_grad_(optimizer_idx == 0)
@@ -84,29 +84,32 @@ class VQGANTrainingModule(LightningModule):
             self.discriminator.train(optimizer_idx == 1)
 
         if optimizer_idx == 0:
-            return self.generator_step(images)
+            return self.generator_step(latent_ids, images)
         elif optimizer_idx == 1:
-            return self.discriminator_step(images)
+            return self.discriminator_step(latent_ids, images)
 
     def training_step(
-        self, images: torch.Tensor, batch_idx: int, optimizer_idx: int
+        self,
+        batch: tuple[torch.Tensor, torch.Tensor],
+        batch_idx: int,
+        optimizer_idx: int,
     ) -> torch.Tensor:
-        _, loss, metrics = self(images, int(optimizer_idx))
+        _, loss, metrics = self(*batch, int(optimizer_idx))
         self.log("step", self.global_step)
         self.log_dict({f"train/{k}": v for k, v in metrics.items()})
         return loss
 
     def validation_step(
-        self, images: torch.Tensor, batch_idx: int
+        self, batch: tuple[torch.Tensor, torch.Tensor], batch_idx: int
     ) -> tuple[Optional[torch.Tensor], Optional[torch.Tensor]]:
-        reconstructed, _, metrics = self(images, optimizer_idx=0)
+        reconstructed, _, metrics = self(*batch, optimizer_idx=0)
         self.log("step", self.global_step)
         self.log_dict({f"val/{k}": v for k, v in metrics.items()})
 
         # Prevent from storing unnecessary image tensors which consume large portion of
         # GPU memory and occur OOM at validation.
         if batch_idx < self.num_log_batches:
-            return images, reconstructed
+            return batch[1], reconstructed
         return None, None
 
     def validation_epoch_end(
