@@ -6,7 +6,7 @@ from dataset import create_train_val_dataloaders
 from lightning import VQGANTrainingModule
 from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning import Trainer
-from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
+from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 
 warnings.filterwarnings("ignore")
@@ -27,7 +27,7 @@ def main(
         accumulate_grad_batches=config.train.accumulate_grad_batches,
         val_check_interval=min(config.train.validation_interval, 1.0),
         check_val_every_n_epoch=max(int(config.train.validation_interval), 1),
-        callbacks=[ModelCheckpoint(save_last=True), LearningRateMonitor("step")],
+        callbacks=[ModelCheckpoint(save_last=True)],
         logger=WandbLogger(
             project="bookcover-generation-vit-vqgan-decoder",
             name=config.train.name,
