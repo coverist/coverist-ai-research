@@ -187,3 +187,6 @@ backups
 *.npy
 *.png
 clip-text-encoder
+dalle-16l-1024d
+*.tar
+*.tar.gz

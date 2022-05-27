@@ -126,7 +126,7 @@ class VQGANQuantizer(nn.Module):
 class PatchDiscriminator(nn.Sequential):
     def __init__(self, num_channels: int = 3, base_dim: int = 64):
         super().__init__(
-            nn.Conv2d(num_channels, 64, kernel_size=4, stride=2, padding=1),
+            nn.Conv2d(num_channels, base_dim, kernel_size=4, stride=2, padding=1),
             nn.LeakyReLU(0.2),
             nn.Conv2d(base_dim, 2 * base_dim, kernel_size=4, stride=2, padding=1),
             nn.LeakyReLU(0.2),

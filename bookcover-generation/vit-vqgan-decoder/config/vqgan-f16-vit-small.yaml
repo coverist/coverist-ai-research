@@ -1,0 +1,51 @@
+data:
+  image_directory: ../../resources/kybobook-images/
+  quantized_index: ../../reosurces/kyobobook-quantized.index
+  quantized_images: ../../resources/kyobobook-quantized.npy
+  image_size: 384
+  validation_ratio: 0.01
+
+model:
+  decoder:
+    vocab_size: 16384
+    hidden_size: 512
+    num_hidden_layers: 8
+    num_attention_heads: 8
+    intermediate_size: 2048
+    max_position_embeddings: 576
+    layer_norm_eps: 1e-5
+    num_labels: 768
+  discriminator:
+    num_channels: 3
+    hidden_dims: [32, 32, 64, 64, 128, 128, 256, 256, 512, 512, 512]
+    strides: [1, 1, 2, 1, 2, 1, 2, 1, 2, 1, 1]
+  perceptual:
+    input_size: [192, 192]
+    language: ["ko"]
+
+optim:
+  generator:
+    lr: 1e-4
+    betas: [0.9, 0.99]
+    eps: 1e-6
+    weight_decay: 1e-4
+  discriminator:
+    lr: 1e-4
+    betas: [0.9, 0.99]
+    eps: 1e-6
+    weight_decay: 1e-4
+  criterion:
+    l2_recon: 1.0
+    l1_recon: 0.1
+    perceptual: 0.1
+    adversarial: 0.1
+  num_discriminator_steps: 1
+
+train:
+  name: vqgan-f16-vit-small
+  epochs: 20
+  batch_size: 32
+  accumulate_grad_batches: 1
+  gradient_clip_val: 0.0
+  validation_interval: 0.25
+  log_every_n_steps: 10
