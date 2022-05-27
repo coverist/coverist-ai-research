@@ -34,7 +34,7 @@ class VQGANTrainingModule(LightningModule):
     def generator_step(
         self, latent_ids: torch.Tensor, images: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor, dict[str, torch.Tensor]]:
-        reconstructed = self.decoder(input_ids=latent_ids)
+        reconstructed = self.decoder(input_ids=latent_ids)[0]
         reconstructed = self.patch_to_image(reconstructed)
 
         loss_l2_recon = F.mse_loss(images, reconstructed)
@@ -59,7 +59,7 @@ class VQGANTrainingModule(LightningModule):
     def discriminator_step(
         self, latent_ids: torch.Tensor, images: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor, dict[str, torch.Tensor]]:
-        reconstructed = self.decoder(input_ids=latent_ids)
+        reconstructed = self.decoder(input_ids=latent_ids)[0]
         reconstructed = self.patch_to_image(reconstructed)
 
         loss_discriminator_real = (1 - self.discriminator(images)).relu().mean()
