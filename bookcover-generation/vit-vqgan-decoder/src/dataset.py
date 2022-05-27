@@ -41,7 +41,7 @@ class VQGANDecoderDataset(Dataset):
         )
         image = 2 * torch.from_numpy(image).float().permute(2, 0, 1) / 0xFF - 1
 
-        return torch.from_numpy(self.images_latents[index]), image
+        return torch.from_numpy(self.images_latents[index].astype(np.int64)), image
 
 
 def create_train_val_dataloaders(config: DictConfig) -> tuple[DataLoader, DataLoader]:
