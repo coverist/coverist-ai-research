@@ -1,5 +1,5 @@
 data:
-  image_directory: ../../resources/kybobook-images/
+  image_directory: ../../resources/kyobobook-images/
   quantized_index: ../../resources/kyobobook-quantized.index
   quantized_images: ../../resources/kyobobook-quantized.npy
   image_size: 384
