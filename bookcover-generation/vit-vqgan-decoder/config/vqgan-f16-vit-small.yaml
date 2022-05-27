@@ -1,6 +1,6 @@
 data:
   image_directory: ../../resources/kybobook-images/
-  quantized_index: ../../reosurces/kyobobook-quantized.index
+  quantized_index: ../../resources/kyobobook-quantized.index
   quantized_images: ../../resources/kyobobook-quantized.npy
   image_size: 384
   validation_ratio: 0.01
