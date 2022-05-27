@@ -32,7 +32,16 @@ class Discriminator(nn.Sequential):
         layers.append(nn.AdaptiveAvgPool2d(1))
         layers.append(nn.Flatten())
         layers.append(nn.Linear(hidden_dims[-1], 1))
+
         super().__init__(*layers)
+        self.init_weights()
+
+    @torch.no_grad()
+    def init_weights(self):
+        for module in self.modules():
+            if isinstance(module, (nn.Linear, nn.Conv2d)):
+                nn.init.orthogonal_(module.weight)
+                nn.utils.parametrizations.spectral_norm(module, eps=1e-6)
 
 
 class OCRPerceptualLoss(nn.Module):
