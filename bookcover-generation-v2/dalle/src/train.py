@@ -19,7 +19,8 @@ def main(
     resume_from: Optional[str] = None,
     resume_id: Optional[str] = None,
 ):
-    trainer = Trainer(
+    checkpoint = ModelCheckpoint(save_last=True)
+    Trainer(
         gpus=1,
         precision=16,
         amp_backend="apex",
@@ -29,18 +30,24 @@ def main(
         accumulate_grad_batches=config.train.accumulate_grad_batches,
         val_check_interval=min(config.train.validation_interval, 1.0),
         check_val_every_n_epoch=max(int(config.train.validation_interval), 1),
-        callbacks=[ModelCheckpoint(save_last=True)],
+        callbacks=[checkpoint],
         logger=WandbLogger(
             project="bookcover-generation-v2-dalle",
             name=config.train.name,
             id=resume_id,
         ),
-    )
-    trainer.fit(
+    ).fit(
         DALLETrainingModule(config),
         DALLETrainingDataModule(config),
         ckpt_path=resume_from,
     )
+
+    # Save the weights of the trained model and its tokenizer through `save_pretrained`.
+    model = DALLETrainingModule.load_from_checkpoint(
+        checkpoint.last_model_path, config=config
+    )
+    model.model.save_pretrained(config.train.name)
+    model.tokenizer.save_pretrained(config.train.name)
 
 
 if __name__ == "__main__":
