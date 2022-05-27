@@ -40,7 +40,7 @@ class OCRPerceptualLoss(nn.Module):
         self, input_size: tuple[int, int] = (192, 192), language: list[str] = ["ko"]
     ):
         super().__init__()
-        self.input_size = input_size
+        self.input_size = tuple(input_size)
 
         self.model = easyocr.Reader(language).detector.module.basenet
         self.model.requires_grad_(False)
