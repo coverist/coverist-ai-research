@@ -7,7 +7,7 @@ from modeling import Discriminator, OCRPerceptualLoss, PatchToImage
 from omegaconf import DictConfig
 from pytorch_lightning import LightningModule
 from torchvision.utils import make_grid
-from transformers import BertConfig, BertForTokenClassification
+from transformers import BertConfig, BertForTokenClassification, get_scheduler
 
 try:
     from apex.optimizers import FusedAdam as AdamW
@@ -128,20 +128,37 @@ class VQGANTrainingModule(LightningModule):
         grid = make_grid(grid, value_range=(-1, 1))
         self.logger.log_image("val/reconstructed", [grid])
 
-    def configure_optimizers(self) -> tuple[dict[str, Any], dict[str, Any]]:
+    def configure_optimizers(self) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         generator_optimizer = AdamW(
-            self.decoder.parameters(), **self.config.optim.generator
+            self.decoder.parameters(), **self.config.optim.optimizer
         )
-        generator_optimizer = {"optimizer": generator_optimizer, "frequency": 1}
-
         discriminator_optimizer = AdamW(
-            self.discriminator.parameters(), **self.config.optim.discriminator
+            self.discriminator.parameters(), **self.config.optim.optimizer
         )
+
+        generator_scheduler = get_scheduler(
+            optimizer=generator_optimizer, **self.config.optim.scheduler
+        )
+        discriminator_scheduler = get_scheduler(
+            optimizer=discriminator_optimizer, **self.config.optim.scheduler
+        )
+
+        generator_optimizer = {"optimizer": generator_optimizer, "frequency": 1}
         discriminator_optimizer = {
             "optimizer": discriminator_optimizer,
             "frequency": self.config.optim.num_discriminator_steps,
         }
-        return generator_optimizer, discriminator_optimizer
+
+        generator_scheduler = {"scheduler": generator_scheduler, "interval": "step"}
+        discriminator_scheduler = {
+            "scheduler": discriminator_scheduler,
+            "interval": "step",
+        }
+
+        return (
+            [generator_optimizer, discriminator_optimizer],
+            [generator_scheduler, discriminator_scheduler],
+        )
 
     def on_load_checkpoint(self, checkpoint: dict[str, Any]):
         if "ApexMixedPrecisionPlugin" in checkpoint:

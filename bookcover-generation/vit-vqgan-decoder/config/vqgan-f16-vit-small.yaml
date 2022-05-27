@@ -24,16 +24,14 @@ model:
     language: ["ko"]
 
 optim:
-  generator:
+  optimizer:
     lr: 1e-4
     betas: [0.9, 0.99]
     eps: 1e-6
     weight_decay: 1e-4
-  discriminator:
-    lr: 1e-4
-    betas: [0.9, 0.99]
-    eps: 1e-6
-    weight_decay: 1e-4
+  scheduler:
+    name: constant
+    num_warmup_steps: 10000
   criterion:
     l2_recon: 1.0
     l1_recon: 0.1
