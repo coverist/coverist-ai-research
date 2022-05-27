@@ -17,7 +17,7 @@ class PatchToImage(nn.Module):
         patches = patches.view(-1, num_patches, num_patches, 3, patch_size, patch_size)
         patches = patches.permute(0, 3, 1, 4, 2, 5)
         patches = patches.view(-1, 3, image_size, image_size)
-        return patches
+        return patches.tanh()
 
 
 class Discriminator(nn.Sequential):
