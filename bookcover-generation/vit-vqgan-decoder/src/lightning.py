@@ -132,34 +132,30 @@ class VQGANTrainingModule(LightningModule):
         generator_optimizer = AdamW(
             self.decoder.parameters(), **self.config.optim.optimizer
         )
-        discriminator_optimizer = AdamW(
-            self.discriminator.parameters(), **self.config.optim.optimizer
-        )
-
         generator_scheduler = get_scheduler(
             optimizer=generator_optimizer, **self.config.optim.scheduler
+        )
+
+        discriminator_optimizer = AdamW(
+            self.discriminator.parameters(), **self.config.optim.optimizer
         )
         discriminator_scheduler = get_scheduler(
             optimizer=discriminator_optimizer, **self.config.optim.scheduler
         )
 
-        generator_scheduler = {"scheduler": generator_scheduler, "interval": "step"}
-        discriminator_scheduler = {
-            "scheduler": discriminator_scheduler,
-            "interval": "step",
-        }
-
         generator_optimizer = {
             "optimizer": generator_optimizer,
             "frequency": 1,
-            "lr_scheduler": generator_scheduler,
+            "lr_scheduler": {"scheduler": generator_scheduler, "interval": "step"},
         }
         discriminator_optimizer = {
             "optimizer": discriminator_optimizer,
             "frequency": self.config.optim.num_discriminator_steps,
-            "lr_scheduler": discriminator_scheduler,
+            "lr_scheduler": {
+                "scheduler": discriminator_scheduler,
+                "interval": "step",
+            },
         }
-
         return [generator_optimizer, discriminator_optimizer]
 
     def on_load_checkpoint(self, checkpoint: dict[str, Any]):
