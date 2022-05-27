@@ -46,7 +46,7 @@ class VQGANDecoderDataset(Dataset):
 
 def create_train_val_dataloaders(config: DictConfig) -> tuple[DataLoader, DataLoader]:
     with open(config.data.quantized_index, "r") as fp:
-        images_index = fp.read().spltilines()
+        images_index = fp.read().splitlines()
     images_latents = np.load(config.data.quantized_images, mmap_mode="r")
 
     dataset = VQGANDecoderDataset(
