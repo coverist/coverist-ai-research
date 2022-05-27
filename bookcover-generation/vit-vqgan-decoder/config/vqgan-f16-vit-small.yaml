@@ -17,8 +17,7 @@ model:
     num_labels: 768
   discriminator:
     num_channels: 3
-    hidden_dims: [32, 64, 64, 128, 128, 256, 256, 512, 512]
-    strides: [1, 2, 1, 2, 1, 2, 1, 2, 1]
+    base_dim: 64
   perceptual:
     input_size: [192, 192]
     language: ["ko"]
@@ -36,7 +35,7 @@ optim:
     l2_recon: 1.0
     l1_recon: 0.1
     perceptual: 0.1
-    adversarial: 0.1
+    adversarial: 0.01
   num_discriminator_steps: 1
 
 train:

@@ -2,8 +2,9 @@ import math
 from typing import Any, Optional
 
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
-from modeling import Discriminator, OCRPerceptualLoss, PatchToImage
+from modeling import OCRPerceptualLoss, PatchDiscriminator, PatchToImage
 from omegaconf import DictConfig
 from pytorch_lightning import LightningModule
 from torchvision.utils import make_grid
@@ -28,7 +29,7 @@ class VQGANTrainingModule(LightningModule):
 
         self.decoder = BertForTokenClassification(BertConfig(**config.model.decoder))
         self.patch_to_image = PatchToImage(config.model.discriminator.num_channels)
-        self.discriminator = Discriminator(**config.model.discriminator)
+        self.discriminator = PatchDiscriminator(**config.model.discriminator)
         self.perceptual = OCRPerceptualLoss(**config.model.perceptual)
 
     def generator_step(
@@ -128,16 +129,21 @@ class VQGANTrainingModule(LightningModule):
         grid = make_grid(grid, value_range=(-1, 1))
         self.logger.log_image("val/reconstructed", [grid])
 
+    def get_param_groups(self, module: nn.Module) -> list[dict[str, Any]]:
+        do_decay = [p for p in module.parameters() if p.ndim >= 2]
+        no_decay = [p for p in module.parameters() if p.ndim < 2]
+        return [{"params": do_decay}, {"params": no_decay, "weight_decay": 0.0}]
+
     def configure_optimizers(self) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         generator_optimizer = AdamW(
-            self.decoder.parameters(), **self.config.optim.optimizer
+            self.get_param_groups(self.decoder), **self.config.optim.optimizer
         )
         generator_scheduler = get_scheduler(
             optimizer=generator_optimizer, **self.config.optim.scheduler
         )
 
         discriminator_optimizer = AdamW(
-            self.discriminator.parameters(), **self.config.optim.optimizer
+            self.get_param_groups(self.discriminator), **self.config.optim.optimizer
         )
         discriminator_scheduler = get_scheduler(
             optimizer=discriminator_optimizer, **self.config.optim.scheduler

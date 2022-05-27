@@ -20,28 +20,19 @@ class PatchToImage(nn.Module):
         return patches.tanh()
 
 
-class Discriminator(nn.Sequential):
-    def __init__(self, num_channels: int, hidden_dims: list[int], strides: list[int]):
-        hidden_dims, strides = [num_channels] + hidden_dims, [1] + strides
-
-        layers = []
-        for in_dim, out_dim, stride in zip(hidden_dims[:-1], hidden_dims[1:], strides):
-            layers.append(nn.Conv2d(in_dim, out_dim, 3, stride, padding=1))
-            layers.append(nn.LeakyReLU(0.2))
-
-        layers.append(nn.AdaptiveAvgPool2d(1))
-        layers.append(nn.Flatten())
-        layers.append(nn.Linear(hidden_dims[-1], 1))
-
-        super().__init__(*layers)
-        self.init_weights()
-
-    @torch.no_grad()
-    def init_weights(self):
-        for module in self.modules():
-            if isinstance(module, (nn.Linear, nn.Conv2d)):
-                nn.init.orthogonal_(module.weight)
-                nn.utils.parametrizations.spectral_norm(module, eps=1e-6)
+class PatchDiscriminator(nn.Sequential):
+    def __init__(self, num_channels: int = 3, base_dim: int = 64):
+        super().__init__(
+            nn.Conv2d(num_channels, base_dim, kernel_size=4, stride=2, padding=1),
+            nn.LeakyReLU(0.2),
+            nn.Conv2d(base_dim, 2 * base_dim, kernel_size=4, stride=2, padding=1),
+            nn.LeakyReLU(0.2),
+            nn.Conv2d(2 * base_dim, 4 * base_dim, kernel_size=4, stride=2, padding=1),
+            nn.LeakyReLU(0.2),
+            nn.Conv2d(4 * base_dim, 8 * base_dim, kernel_size=4, padding=1),
+            nn.LeakyReLU(0.2),
+            nn.Conv2d(8 * base_dim, 1, kernel_size=4, padding=1),
+        )
 
 
 class OCRPerceptualLoss(nn.Module):
