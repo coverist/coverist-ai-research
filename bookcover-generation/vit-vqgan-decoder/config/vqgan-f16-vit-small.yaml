@@ -30,7 +30,7 @@ optim:
     eps: 1e-6
     weight_decay: 1e-4
   scheduler:
-    name: constant
+    name: constant_with_warmup
     num_warmup_steps: 10000
   criterion:
     l2_recon: 1.0
