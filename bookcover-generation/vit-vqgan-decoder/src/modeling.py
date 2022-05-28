@@ -22,26 +22,24 @@ class PatchToImage(nn.Module):
 
 class SNGANDiscriminatorLayer(nn.Module):
     def __init__(
-        self, input_dim: int, middle_dim: int, output_dim: int, downsampling: int = 1
+        self, input_dim: int, middle_dim: int, output_dim: int, stride: int = 1
     ):
         super().__init__()
         self.conv1 = nn.Conv2d(input_dim, middle_dim, 1)
         self.conv2 = nn.Conv2d(middle_dim, middle_dim, 3, padding=1)
-        self.conv3 = nn.Conv2d(middle_dim, middle_dim, 3, padding=1)
+        self.conv3 = nn.Conv2d(middle_dim, middle_dim, 3, stride, padding=1)
         self.conv4 = nn.Conv2d(middle_dim, output_dim, 1)
 
         if output_dim > input_dim:
-            self.shortcut = nn.Conv2d(input_dim, output_dim - input_dim, 1)
-        self.downsampling = nn.AvgPool2d(downsampling, downsampling)
+            self.shortcut = nn.Conv2d(input_dim, output_dim - input_dim, 1, stride)
 
     def forward(self, hidden: torch.Tensor) -> torch.Tensor:
         shortcut = hidden
         hidden = self.conv1(hidden.relu())
         hidden = self.conv2(hidden.relu())
         hidden = self.conv3(hidden.relu())
-        hidden = self.conv4(self.downsampling(hidden.relu()))
+        hidden = self.conv4(hidden.relu())
 
-        shortcut = self.downsampling(shortcut)
         if shortcut.size(1) != hidden.size(1):
             shortcut = torch.cat((shortcut, self.shortcut(shortcut)), dim=1)
         return hidden + shortcut
@@ -67,7 +65,7 @@ class SNGANDiscriminator(nn.Module):
                     last_hidden_dim,
                     hidden_dim // middle_reduction,
                     hidden_dim,
-                    downsampling=2 if is_last_layer else 1,
+                    stride=2 if is_last_layer else 1,
                 )
                 layers.append(layer)
                 last_hidden_dim = hidden_dim
