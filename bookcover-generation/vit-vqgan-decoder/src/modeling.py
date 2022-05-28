@@ -30,7 +30,7 @@ class SNGANDiscriminatorLayer(nn.Module):
         self.conv3 = nn.Conv2d(middle_dim, middle_dim, 3, stride, padding=1)
         self.conv4 = nn.Conv2d(middle_dim, output_dim, 1)
 
-        if output_dim > input_dim or stride > 1:
+        if output_dim != input_dim or stride > 1:
             self.shortcut = nn.Conv2d(input_dim, output_dim, 1, stride)
 
     def forward(self, hidden: torch.Tensor) -> torch.Tensor:
