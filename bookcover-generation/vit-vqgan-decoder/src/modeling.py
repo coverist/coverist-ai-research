@@ -31,7 +31,7 @@ class SNGANDiscriminatorLayer(nn.Module):
         self.conv4 = nn.Conv2d(middle_dim, output_dim, 1)
 
         if output_dim > input_dim:
-            self.shortcut = nn.Conv2d(input_dim, output_dim - input_dim, 1, stride)
+            self.shortcut = nn.Conv2d(input_dim, output_dim, 1, stride)
 
     def forward(self, hidden: torch.Tensor) -> torch.Tensor:
         shortcut = hidden
@@ -41,7 +41,7 @@ class SNGANDiscriminatorLayer(nn.Module):
         hidden = self.conv4(hidden.relu())
 
         if shortcut.size(1) != hidden.size(1):
-            shortcut = torch.cat((shortcut, self.shortcut(shortcut)), dim=1)
+            shortcut = self.shortcut(shortcut)
         return hidden + shortcut
 
 
