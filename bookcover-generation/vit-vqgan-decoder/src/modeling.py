@@ -70,9 +70,9 @@ class SNGANDiscriminator(nn.Module):
                 layers.append(layer)
                 last_hidden_dim = hidden_dim
 
-        self.conv = nn.Conv2d(num_channels, base_dim, 3, padding=1)
+        self.conv = nn.Conv2d(num_channels, base_dim, 7, stride=2, padding=1)
         self.layers = nn.Sequential(*layers)
-        self.linear = nn.Linear(min(base_dim * 2 ** num_blocks, max_hidden_dim), 1)
+        self.linear = nn.Linear(min(last_hidden_dim, max_hidden_dim), 1)
         self.init_weights()
 
     @torch.no_grad()
