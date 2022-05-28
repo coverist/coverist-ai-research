@@ -17,7 +17,11 @@ model:
     num_labels: 768
   discriminator:
     num_channels: 3
-    base_dim: 64
+    base_dim: 256
+    max_hidden_dim: 2048
+    middle_reduction: 4
+    num_blocks: 5
+    num_layers_in_block: 2
   perceptual:
     input_size: [192, 192]
     language: ["ko"]
@@ -30,7 +34,7 @@ optim:
     weight_decay: 1e-4
   scheduler:
     name: constant_with_warmup
-    num_warmup_steps: 10000
+    num_warmup_steps: 0
   criterion:
     l2_recon: 1.0
     l1_recon: 0.1
@@ -43,6 +47,6 @@ train:
   epochs: 100
   batch_size: 128
   accumulate_grad_batches: 1
-  gradient_clip_val: 0.0
+  gradient_clip_val: 0.5
   validation_interval: 1.0
   log_every_n_steps: 10

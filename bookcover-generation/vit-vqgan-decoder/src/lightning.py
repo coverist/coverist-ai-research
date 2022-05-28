@@ -4,11 +4,15 @@ from typing import Any, Optional
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from modeling import OCRPerceptualLoss, PatchDiscriminator, PatchToImage
+from modeling import OCRPerceptualLoss, PatchToImage, SNGANDiscriminator
 from omegaconf import DictConfig
 from pytorch_lightning import LightningModule
 from torchvision.utils import make_grid
-from transformers import BertConfig, BertForTokenClassification, get_scheduler
+from transformers import (
+    MegatronBertConfig,
+    MegatronBertForTokenClassification,
+    get_scheduler,
+)
 
 try:
     from apex.optimizers import FusedAdam as AdamW
@@ -27,9 +31,11 @@ class VQGANTrainingModule(LightningModule):
         self.perceptual_loss_weight = config.optim.criterion.perceptual
         self.adversarial_loss_weight = config.optim.criterion.adversarial
 
-        self.decoder = BertForTokenClassification(BertConfig(**config.model.decoder))
+        self.decoder = MegatronBertForTokenClassification(
+            MegatronBertConfig(**config.model.decoder)
+        )
         self.patch_to_image = PatchToImage(config.model.discriminator.num_channels)
-        self.discriminator = PatchDiscriminator(**config.model.discriminator)
+        self.discriminator = SNGANDiscriminator(**config.model.discriminator)
         self.perceptual = OCRPerceptualLoss(**config.model.perceptual)
 
     def generator_step(

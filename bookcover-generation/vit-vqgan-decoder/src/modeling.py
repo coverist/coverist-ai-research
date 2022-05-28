@@ -20,19 +20,74 @@ class PatchToImage(nn.Module):
         return patches.tanh()
 
 
-class PatchDiscriminator(nn.Sequential):
-    def __init__(self, num_channels: int = 3, base_dim: int = 64):
-        super().__init__(
-            nn.Conv2d(num_channels, base_dim, kernel_size=4, stride=2, padding=1),
-            nn.LeakyReLU(0.2),
-            nn.Conv2d(base_dim, 2 * base_dim, kernel_size=4, stride=2, padding=1),
-            nn.LeakyReLU(0.2),
-            nn.Conv2d(2 * base_dim, 4 * base_dim, kernel_size=4, stride=2, padding=1),
-            nn.LeakyReLU(0.2),
-            nn.Conv2d(4 * base_dim, 8 * base_dim, kernel_size=4, padding=1),
-            nn.LeakyReLU(0.2),
-            nn.Conv2d(8 * base_dim, 1, kernel_size=4, padding=1),
-        )
+class SNGANDiscriminatorLayer(nn.Module):
+    def __init__(
+        self, input_dim: int, middle_dim: int, output_dim: int, downsampling: int = 1
+    ):
+        super().__init__()
+        self.conv1 = nn.Conv2d(input_dim, middle_dim, 1)
+        self.conv2 = nn.Conv2d(middle_dim, middle_dim, 3, padding=1)
+        self.conv3 = nn.Conv2d(middle_dim, middle_dim, 3, padding=1)
+        self.conv4 = nn.Conv2d(middle_dim, output_dim, 1)
+
+        if output_dim > input_dim:
+            self.shortcut = nn.Conv2d(input_dim, output_dim - input_dim, 1)
+        self.downsampling = nn.AvgPool2d(downsampling, downsampling)
+
+    def forward(self, hidden: torch.Tensor) -> torch.Tensor:
+        shortcut = hidden
+        hidden = self.conv1(hidden.relu())
+        hidden = self.conv2(hidden.relu())
+        hidden = self.conv3(hidden.relu())
+        hidden = self.conv4(self.downsampling(hidden.relu()))
+
+        shortcut = self.downsampling(shortcut)
+        if shortcut.size(1) != hidden.size(1):
+            shortcut = torch.cat((shortcut, self.shortcut(shortcut)), dim=1)
+        return hidden + shortcut
+
+
+class SNGANDiscriminator(nn.Module):
+    def __init__(
+        self,
+        num_channels: int = 3,
+        base_dim: int = 256,
+        max_hidden_dim: int = 2048,
+        middle_reduction: int = 4,
+        num_blocks: int = 5,
+        num_layers_in_block: int = 2,
+    ):
+        super().__init__()
+        layers, last_hidden_dim = [], base_dim
+        for i in range(num_blocks):
+            hidden_dim = min(base_dim * 2 ** i, max_hidden_dim)
+            for j in range(num_layers_in_block):
+                is_last_layer = i < num_blocks - 1 and j == num_layers_in_block - 1
+                layer = SNGANDiscriminatorLayer(
+                    last_hidden_dim,
+                    hidden_dim // middle_reduction,
+                    hidden_dim,
+                    downsampling=2 if is_last_layer else 1,
+                )
+                layers.append(layer)
+                last_hidden_dim = hidden_dim
+
+        self.conv = nn.Conv2d(num_channels, base_dim, 3, padding=1)
+        self.layers = nn.Sequential(*layers)
+        self.linear = nn.Linear(min(base_dim * 2 ** num_blocks, max_hidden_dim), 1)
+        self.init_weights()
+
+    @torch.no_grad()
+    def init_weights(self):
+        for module in self.modules():
+            if isinstance(module, (nn.Linear, nn.Conv2d)):
+                nn.init.orthogonal_(module.weight)
+                nn.utils.parametrizations.spectral_norm(module, eps=1e-6)
+
+    def forward(self, images: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
+        hidden = self.conv(images.type_as(self.conv.weight))
+        hidden = self.layers(hidden).relu().sum((2, 3))
+        return self.linear(hidden).squeeze(1)
 
 
 class OCRPerceptualLoss(nn.Module):
