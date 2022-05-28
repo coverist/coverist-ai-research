@@ -84,7 +84,7 @@ class SNGANDiscriminator(nn.Module):
                 nn.init.orthogonal_(module.weight)
                 nn.utils.parametrizations.spectral_norm(module, eps=1e-6)
 
-    def forward(self, images: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
+    def forward(self, images: torch.Tensor) -> torch.Tensor:
         hidden = self.conv(images.type_as(self.conv.weight))
         hidden = self.layers(hidden).relu().sum((2, 3))
         return self.linear(hidden).squeeze(1)
