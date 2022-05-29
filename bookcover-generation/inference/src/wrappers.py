@@ -16,7 +16,10 @@ class DALLEEncoderWrapper(nn.Module):
         self.linear = linear or nn.Identity()
 
     def generate_example_inputs(self) -> tuple[torch.Tensor, torch.Tensor]:
-        return torch.zeros((1, 1), dtype=torch.long), torch.zeros((1, 1))
+        return (
+            torch.zeros((1, 1), dtype=torch.int64),
+            torch.zeros((1, 1), dtype=torch.int64),
+        )
 
     def forward(
         self, input_ids: torch.Tensor, attention_mask: torch.Tensor
@@ -45,10 +48,10 @@ class DALLEDecoderWrapper(nn.Module):
             for _ in range(self.decoder.config.num_hidden_layers * 2)
         ]
         return (
-            torch.zeros((1, 1), dtype=torch.long),
+            torch.zeros((1, 1), dtype=torch.int64),
             past_key_values,
             torch.zeros((1, 1, self.decoder.config.hidden_size)),
-            torch.zeros((1, 1)),
+            torch.zeros((1, 1), dtype=torch.int64),
         )
 
     def forward(
@@ -59,8 +62,8 @@ class DALLEDecoderWrapper(nn.Module):
         encoder_attention_mask: torch.Tensor,
     ) -> tuple[torch.Tensor, list[torch.Tensor]]:
         past_key_values = [
-            (past_key_values[i * 2], past_key_values[i * 2 + 1])
-            for i in range(len(past_key_values) // 2)
+            (past_key_values[i], past_key_values[i + 1])
+            for i in range(0, len(past_key_values), 2)
         ]
         logits, past_key_values = self.decoder(
             input_ids=input_ids,
@@ -81,7 +84,7 @@ class VQGANDecoderWrapper(nn.Module):
         self.num_rows = int(sequence_length ** 0.5)
 
     def generate_example_inputs(self) -> torch.Tensor:
-        return torch.zeros((1, self.sequence_length), dtype=torch.long)
+        return torch.zeros((1, self.sequence_length), dtype=torch.int64)
 
     def forward(self, latent_ids: torch.Tensor) -> torch.Tensor:
         return self.decoder(latent_ids.view(-1, self.num_rows, self.num_rows))
@@ -112,20 +115,20 @@ class DALLE(nn.Module):
         self.kv_num_hidden_layers = kv_num_hidden_layers
 
     def prepare_generation_inputs(
-        self, input_ids: torch.Tensor, num_return_sequences: int
+        self, hidden_states: torch.Tensor
     ) -> tuple[torch.Tensor, list[torch.Tensor]]:
-        batch_size = input_ids.size(0) * num_return_sequences
         num_attention_heads = self.kv_num_attention_heads
         attention_head_size = self.kv_attention_head_size
-        kv_shape = (batch_size, num_attention_heads, 0, attention_head_size)
+        kv_shape = (hidden_states.size(0), num_attention_heads, 0, attention_head_size)
 
         input_ids = torch.tensor(
-            [[self.start_token_id]] * batch_size,
-            device=input_ids.device,
+            [[self.start_token_id]] * hidden_states.size(0),
+            device=hidden_states.device,
             dtype=torch.int64,
         )
         past_key_values = [
-            input_ids.new_zeros(kv_shape) for _ in range(self.kv_num_hidden_layers * 2)
+            hidden_states.new_zeros(kv_shape)
+            for _ in range(self.kv_num_hidden_layers * 2)
         ]
         return input_ids, past_key_values
 
@@ -140,9 +143,7 @@ class DALLE(nn.Module):
         hidden_states = self.dalle_encoder(input_ids, attention_mask)
         hidden_states = hidden_states.repeat_interleave(num_return_sequences, dim=0)
 
-        input_ids, past_key_values = self.prepare_generation_inputs(
-            input_ids, num_return_sequences
-        )
+        input_ids, past_key_values = self.prepare_generation_inputs(hidden_states)
         generated_tokens = []
 
         for _ in range(self.sequence_length):
