@@ -191,3 +191,4 @@ dalle-16l-1024d
 *.tar
 *.tar.gz
 *.index
+dalle-tokenizer

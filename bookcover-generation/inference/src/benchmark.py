@@ -45,7 +45,7 @@ def main(args: argparse.Namespace):
 
         print(f"[*] Start benchmark of {i + 1}th case")
 
-        for batch in [1, 4]:
+        for batch in [1, 4, 8]:
             for repeats in [1, 10]:
                 with timer() as record:
                     for _ in range(repeats):
@@ -56,7 +56,7 @@ def main(args: argparse.Namespace):
                     f" avg {record.duration / repeats}"
                 )
 
-        for batch in [1, 4]:
+        for batch in [1, 4, 8]:
             for repeats in [1, 10]:
                 with timer() as record:
                     for _ in range(repeats):
