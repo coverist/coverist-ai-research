@@ -108,9 +108,9 @@ def main(args: argparse.ArgumentParser):
 
     logging.debug("Save the dalle model and tokenizer")
     if args.use_torchscript:
-        dalle.save(args.output)
+        dalle.save(args.output_model)
     else:
-        torch.save(dalle, args.output)
+        torch.save(dalle, args.output_model)
     tokenizer.save_pretrained(args.output_tokenizer)
 
 
