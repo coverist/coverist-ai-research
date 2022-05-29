@@ -24,11 +24,23 @@ def move_tensors_to(tensors: Any, device: Union[str, torch.device] = "cpu") -> A
         return tensors.to(device)
 
 
+def cast_tensors_to_float16(tensors: Any) -> Any:
+    if isinstance(tensors, tuple):
+        return tuple(cast_tensors_to_float16(x) for x in tensors)
+    elif isinstance(tensors, list):
+        return [cast_tensors_to_float16(x) for x in tensors]
+    elif isinstance(tensors, torch.Tensor):
+        return tensors.half() if tensors.dtype == torch.float32 else tensors
+
+
 def compile_with_trace(
-    module: nn.Module, use_gpu: bool = False
+    module: nn.Module, use_gpu: bool = False, use_fp16: bool = False
 ) -> torch.jit.ScriptModule:
     example_inputs = module.generate_example_inputs()
     example_inputs = move_tensors_to(example_inputs, "cuda" if use_gpu else "cpu")
+
+    if use_fp16:
+        example_inputs = cast_tensors_to_float16(example_inputs)
     return torch.jit.trace(module, example_inputs)
 
 
@@ -71,6 +83,11 @@ def main(args: argparse.ArgumentParser):
         dalle_encoder_decoder.cuda()
         vqgan_decoder.cuda()
 
+    if args.use_fp16:
+        logging.debug("Convert the weights to float16")
+        dalle_encoder_decoder.half()
+        vqgan_decoder.half()
+
     logging.debug("Wrapping the models")
     dalle_encoder = DALLEEncoderWrapper(
         dalle_encoder_decoder.encoder,
@@ -81,9 +98,9 @@ def main(args: argparse.ArgumentParser):
 
     if args.use_torchscript:
         logging.debug("Compile to torchscript JIT through tracing...")
-        dalle_encoder = compile_with_trace(dalle_encoder, args.use_gpu)
-        dalle_decoder = compile_with_trace(dalle_decoder, args.use_gpu)
-        vqgan_decoder = compile_with_trace(vqgan_decoder, args.use_gpu)
+        dalle_encoder = compile_with_trace(dalle_encoder, args.use_gpu, args.use_fp16)
+        dalle_decoder = compile_with_trace(dalle_decoder, args.use_gpu, args.use_fp16)
+        vqgan_decoder = compile_with_trace(vqgan_decoder, args.use_gpu, args.use_fp16)
 
     logging.debug("Create a new dalle model")
     dalle = DALLE(
@@ -121,6 +138,7 @@ if __name__ == "__main__":
     parser.add_argument("--sequence-length", type=int, default=576)
     parser.add_argument("--use-torchscript", action="store_true", default=False)
     parser.add_argument("--use-gpu", action="store_true", default=False)
+    parser.add_argument("--use-fp16", action="store_true", default=False)
     parser.add_argument("--output-model", default="dalle.pth")
     parser.add_argument("--output-tokenizer", default="dalle-tokenizer")
     parser.add_argument("--verbose", action="store_true", default=False)
