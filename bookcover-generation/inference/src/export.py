@@ -100,7 +100,10 @@ def main(args: argparse.ArgumentParser):
     if args.use_torchscript:
         logging.debug("Compile the dalle to torchscript JIT...")
         dalle = torch.jit.script(dalle)
-        dalle = torch.jit.optimize_for_inference(dalle)
+
+        if args.optimize:
+            logging.debug("Optimize the JIT module for inference...")
+            dalle = torch.jit.optimize_for_inference(dalle)
 
     logging.debug("Finish exporting dalle model!")
     logging.debug("Start evaluating and check if the model performs correctly")
@@ -120,6 +123,7 @@ if __name__ == "__main__":
     parser.add_argument("--sequence-length", type=int, default=576)
     parser.add_argument("--use-torchscript", action="store_true", default=False)
     parser.add_argument("--use-gpu", action="store_true", default=False)
+    parser.add_argument("--optimize", action="store_true", default=False)
     parser.add_argument("--output", default="dalle.pth")
     parser.add_argument("--verbose", action="store_true", default=False)
     main(parser.parse_args())
