@@ -137,6 +137,9 @@ class DALLE(nn.Module):
         top_k: int = 50,
         num_return_sequences: int = 1,
     ) -> torch.Tensor:
+        input_ids = input_ids.long()
+        attention_mask = attention_mask.float()
+
         hidden_states = self.dalle_encoder(input_ids, attention_mask)
         hidden_states = hidden_states.repeat_interleave(num_return_sequences, dim=0)
 
