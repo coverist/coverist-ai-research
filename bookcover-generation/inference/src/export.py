@@ -106,7 +106,7 @@ def main(args: argparse.ArgumentParser):
             dalle = torch.jit.optimize_for_inference(dalle)
 
     logging.debug("Finish exporting dalle model!")
-    logging.debug("Start evaluating and check if the model performs correctly")
+    logging.debug("Test evaluation and check if the model performs correctly")
     test_model_generation(dalle, tokenizer, args.use_gpu)
 
     logging.debug("Save the dalle model")
