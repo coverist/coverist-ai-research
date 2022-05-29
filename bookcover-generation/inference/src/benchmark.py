@@ -31,6 +31,11 @@ def main(args: argparse.Namespace):
     jit_model = torch.jit.load(args.jit_model)
     tokenizer = AutoTokenizer.from_pretrained(args.tokenizer)
 
+    if args.use_fp16:
+        print("[*] Convert the model to `torch.float16`")
+        torch_model.half()
+        jit_model.half()
+
     for i, test_case in enumerate(GENERATION_TEST_CASES):
         encodings = f" {tokenizer.sep_token} ".join(test_case)
         encodings = tokenizer(encodings, return_tensors="pt")
@@ -72,6 +77,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--torch-model", default="dalle-torch.pth")
     parser.add_argument("--jit-model", default="dalle-jit.pth")
-    parser.add_argument("--tokenizer", default="dalle-16l-1024d")
+    parser.add_argument("--tokenizer", default="dalle-tokenizer")
     parser.add_argument("--use-gpu", action="store_true", default=False)
+    parser.add_argument("--use-fp16", action="store_true", default=False)
     main(parser.parse_args())
