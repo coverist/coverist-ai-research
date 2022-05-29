@@ -58,7 +58,7 @@ def main(args: argparse.ArgumentParser):
     logging.debug("Load dalle-encoder-decoder and vqgan-decoder...")
     tokenizer = AutoTokenizer.from_pretrained(args.dalle_encoder_decoder)
     dalle_encoder_decoder = EncoderDecoderModel.from_pretrained(
-        args.dalle_encoder_decoder
+        args.dalle_encoder_decoder, torchscript=args.use_torchscript
     )
     vqgan_decoder = VQGANDecoder.from_pretrained(args.vqgan_decoder)
 
